@@ -1,11 +1,11 @@
 __author__ = "Charles Mesa Cayobit"
 
-
-from pathlib import Path
-from configparser import ConfigParser
 from collections import defaultdict
+from configparser import ConfigParser
+from pathlib import Path
 from types import MappingProxyType
 
+_TARGETS_FILE = Path(__file__).with_name('targets.cfg')
 
 MISC_DIR = "Misc"
 
@@ -27,7 +27,7 @@ def read_targets_from_file(file: Path):
     return frozenset(directories), MappingProxyType(targets)
 
 
-DIRECTORIES, TARGETS = read_targets_from_file(Path(__file__).with_name("targets.cfg"))
+DIRECTORIES, TARGETS = read_targets_from_file(_TARGETS_FILE)
 
 
 def move_file(file: Path, target_dir: Path) -> None:
