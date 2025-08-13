@@ -2,8 +2,6 @@ __author__ = "Charles Mesa Cayobit"
 
 
 from pathlib import Path
-
-
 from configparser import ConfigParser
 from collections import defaultdict
 from types import MappingProxyType
@@ -13,20 +11,23 @@ MISC_DIR = "Misc"
 
 
 def read_targets_from_file(file: Path):
+    """Read the directories and target paths from a file."""
+
     parser = ConfigParser()
     parser.read(file)
 
-    directories = set(parser["paths"].values())
+    directories = set(parser["directories"].values())
     directories.add(MISC_DIR)
 
     targets = defaultdict(
-        lambda: MISC_DIR, {k: parser["paths"][v] for k, v in parser["targets"].items()}
+        lambda: MISC_DIR,
+        {k: parser["directories"][v] for k, v in parser["targets"].items()},
     )
 
     return frozenset(directories), MappingProxyType(targets)
 
 
-directories, targets = read_targets_from_file(Path(__file__).with_name("targets.cfg"))
+DIRECTORIES, TARGETS = read_targets_from_file(Path(__file__).with_name("targets.cfg"))
 
 
 def move_file(file: Path, target_dir: Path) -> None:
@@ -48,10 +49,10 @@ def move_extensionless(file: Path, root_dir: Path) -> None:
 
     else:
         if "python3" in header:
-            target_dir = targets["py"]
+            target_dir = TARGETS["py"]
 
         elif "sh" in header:
-            target_dir = targets["sh"]
+            target_dir = TARGETS["sh"]
 
     move_file(file, root_dir / target_dir)
 
@@ -69,7 +70,7 @@ def move_image(image_file: Path, target_dir: Path) -> None:
 
 
 def main(root_dir: Path) -> None:
-    for dir in directories:
+    for dir in DIRECTORIES:
         (root_dir / dir).mkdir(parents=True, exist_ok=True)
 
     # `move_image()` will move an image's existing sidecar file alongside the
@@ -77,7 +78,7 @@ def main(root_dir: Path) -> None:
     xmp_files: list[Path] = []
 
     for file in root_dir.iterdir():
-        if file.name in directories or file.name == ".DS_Store":
+        if file.name in DIRECTORIES or file.name == ".DS_Store":
             continue
 
         elif file.is_dir():
@@ -94,8 +95,8 @@ def main(root_dir: Path) -> None:
             xmp_files.append(file)
             continue
 
-        target_dir = targets[file_ext]
-        if target_dir == targets["jpg"] or target_dir == targets["dng"]:
+        target_dir = TARGETS[file_ext]
+        if target_dir == TARGETS["jpg"] or target_dir == TARGETS["dng"]:
             move_image(file, root_dir / target_dir)
 
         else:
