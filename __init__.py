@@ -3,7 +3,30 @@ __author__ = "Charles Mesa Cayobit"
 
 from pathlib import Path
 
-import organize_directory.targets as targets
+
+from configparser import ConfigParser
+from collections import defaultdict
+from types import MappingProxyType
+
+
+MISC_DIR = "Misc"
+
+
+def read_targets_from_file(file: Path):
+    parser = ConfigParser()
+    parser.read(file)
+
+    directories = set(parser["paths"].values())
+    directories.add(MISC_DIR)
+
+    targets = defaultdict(
+        lambda: MISC_DIR, {k: parser["paths"][v] for k, v in parser["targets"].items()}
+    )
+
+    return frozenset(directories), MappingProxyType(targets)
+
+
+directories, targets = read_targets_from_file(Path(__file__).with_name("targets.cfg"))
 
 
 def move_file(file: Path, target_dir: Path) -> None:
@@ -15,7 +38,7 @@ def move_file(file: Path, target_dir: Path) -> None:
 def move_extensionless(file: Path, root_dir: Path) -> None:
     """Move a file without an extension."""
 
-    target_dir = targets.MISC
+    target_dir = MISC_DIR
     try:
         with file.open(encoding="utf-8") as f:
             header = f.readline().lower()
@@ -25,10 +48,10 @@ def move_extensionless(file: Path, root_dir: Path) -> None:
 
     else:
         if "python3" in header:
-            target_dir = targets.PROGRAMMING_PYTHON
+            target_dir = targets["py"]
 
         elif "sh" in header:
-            target_dir = targets.PROGRAMMING_SHELL
+            target_dir = targets["sh"]
 
     move_file(file, root_dir / target_dir)
 
@@ -46,7 +69,7 @@ def move_image(image_file: Path, target_dir: Path) -> None:
 
 
 def main(root_dir: Path) -> None:
-    for dir in targets.DIRECTORIES:
+    for dir in directories:
         (root_dir / dir).mkdir(parents=True, exist_ok=True)
 
     # `move_image()` will move an image's existing sidecar file alongside the
@@ -54,11 +77,11 @@ def main(root_dir: Path) -> None:
     xmp_files: list[Path] = []
 
     for file in root_dir.iterdir():
-        if file.name in targets.DIRECTORIES or file.name == ".DS_Store":
+        if file.name in directories or file.name == ".DS_Store":
             continue
 
         elif file.is_dir():
-            move_file(file, root_dir / targets.MISC)
+            move_file(file, root_dir / MISC_DIR)
             continue
 
         file_ext = file.suffix
@@ -71,8 +94,8 @@ def main(root_dir: Path) -> None:
             xmp_files.append(file)
             continue
 
-        target_dir = targets.TARGETS[file_ext]
-        if target_dir == targets.IMAGES or target_dir == targets.IMAGES_RAW:
+        target_dir = targets[file_ext]
+        if target_dir == targets["jpg"] or target_dir == targets["dng"]:
             move_image(file, root_dir / target_dir)
 
         else:
@@ -80,7 +103,7 @@ def main(root_dir: Path) -> None:
 
     for xmp_file in xmp_files:
         try:
-            move_file(xmp_file, root_dir / targets.MISC)
+            move_file(xmp_file, root_dir / MISC_DIR)
         except FileNotFoundError:
             pass  # Do nothing if the image sidecar file had already been moved.
 
