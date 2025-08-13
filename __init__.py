@@ -5,12 +5,14 @@ from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
 
-_TARGETS_FILE = Path(__file__).with_name('targets.cfg')
+_TARGETS_FILE = Path(__file__).with_name("targets.cfg")
 
 MISC_DIR = "Misc"
 
 
-def read_targets_from_file(file: Path):
+def read_targets_from_file(
+    file: Path,
+) -> tuple[frozenset[str], MappingProxyType[str, str]]:
     """Read the directories and target paths from a file."""
 
     parser = ConfigParser()
