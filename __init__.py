@@ -3,7 +3,6 @@ __author__ = "Charles Mesa Cayobit"
 from collections import defaultdict
 from configparser import ConfigParser
 from pathlib import Path
-from types import MappingProxyType
 
 _TARGETS_FILE = Path(__file__).with_name("targets.cfg")
 
@@ -12,7 +11,7 @@ MISC_DIR = "Misc"
 
 def read_targets_from_file(
     file: Path,
-) -> tuple[frozenset[str], MappingProxyType[str, str]]:
+) -> tuple[set[str], defaultdict[str, str]]:
     """Read the directories and target paths from a file."""
 
     parser = ConfigParser()
@@ -26,7 +25,7 @@ def read_targets_from_file(
         {k: parser["directories"][v] for k, v in parser["targets"].items()},
     )
 
-    return frozenset(directories), MappingProxyType(targets)
+    return directories, targets
 
 
 DIRECTORIES, TARGETS = read_targets_from_file(_TARGETS_FILE)
