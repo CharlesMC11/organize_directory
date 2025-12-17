@@ -2,7 +2,6 @@
 
 __author__ = "Charles Mesa Cayobit"
 
-
 from argparse import ArgumentParser
 from pathlib import Path
 
