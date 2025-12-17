@@ -20,10 +20,11 @@ def read_targets_from_file(
     directories = set(parser["directories"].values())
     directories.add(MISC_DIR)
 
-    targets = defaultdict(
-        lambda: MISC_DIR,
-        {k: parser["directories"][v] for k, v in parser["targets"].items()},
-    )
+    targets = {
+        file_extension: parser["directories"][target_path]
+        for file_extension, target_path in parser["targets"].items()
+    }
+    targets = defaultdict(lambda: MISC_DIR, targets)
 
     return directories, targets
 
