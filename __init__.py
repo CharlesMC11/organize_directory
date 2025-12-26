@@ -125,6 +125,3 @@ def main(root_dir: Path) -> None:
             move_file(xmp_file, root_dir / MISC_DIR)
         except FileNotFoundError:
             pass  # Do nothing if the image sidecar file had already been moved.
-
-
-__all__ = "move_file", "move_extensionless", "move_image", "main"
