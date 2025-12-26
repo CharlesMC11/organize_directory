@@ -7,13 +7,14 @@ from pathlib import Path
 
 TARGETS_FILE = Path(__file__).with_name("targets.cfg")
 
-SHEBANG_PY = re.compile(rb"#!.*?python")
-SHEBANG_SH = re.compile(rb"#!.*?sh")
-
 MISC_DIR = "Misc"
 
 
 class FileOrganizer:
+    HEADERS = (
+        (re.compile(rb"#!.*?python"), 'py'),
+        (re.compile(rb"#!.*?sh"), 'sh')
+    )
 
     def __init__(self, targets_file: Path) -> None:
         parser = ConfigParser()
@@ -60,11 +61,10 @@ def move_extensionless(file: Path, root_dir: Path) -> None:
         pass  # Do nothing because the target defaults to `MISC_DIR`
 
     else:
-        if SHEBANG_PY.match(header):
-            target_dir = ORGANIZER.targets["py"]
-
-        elif SHEBANG_SH.match(header):
-            target_dir = ORGANIZER.targets["sh"]
+        for pattern, key in FileOrganizer.HEADERS:
+            if pattern.match(header):
+                target_dir = ORGANIZER.targets[key]
+                break
 
     move_file(file, root_dir / target_dir)
 
