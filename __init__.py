@@ -1,7 +1,6 @@
 __author__ = "Charles Mesa Cayobit"
 
 import re
-from collections import defaultdict
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -13,27 +12,33 @@ SHEBANG_SH = re.compile(r"#!.*?sh")
 MISC_DIR = "Misc"
 
 
-def read_targets_from_file(
-    file: Path,
-) -> tuple[set[str], defaultdict[str, str]]:
-    """Read the directories and target paths from a file."""
+class FileOrganizer:
 
-    parser = ConfigParser()
-    parser.read(file)
+    def __init__(self, targets_file: Path) -> None:
+        parser = ConfigParser()
+        parser.read(targets_file)
 
-    directories = set(parser["directories"].values())
-    directories.add(MISC_DIR)
+        directories = set(parser["directories"].values())
+        directories.add(MISC_DIR)
 
-    targets = {
-        file_extension: parser["directories"][target_path]
-        for file_extension, target_path in parser["targets"].items()
-    }
-    targets = defaultdict(lambda: MISC_DIR, targets)
+        targets = {
+            file_extension: parser["directories"][target_path]
+            for file_extension, target_path in parser["targets"].items()
+        }
 
-    return directories, targets
+        self._directories = directories
+        self._targets = targets
+
+    @property
+    def directories(self) -> set[str]:
+        return self._directories
+
+    @property
+    def targets(self) -> dict[str, str]:
+        return self._targets
 
 
-DIRECTORIES, TARGETS = read_targets_from_file(TARGETS_FILE)
+ORGANIZER = FileOrganizer(TARGETS_FILE)
 
 
 def move_file(file: Path, target_dir: Path) -> None:
@@ -55,10 +60,10 @@ def move_extensionless(file: Path, root_dir: Path) -> None:
 
     else:
         if SHEBANG_PY.match(header):
-            target_dir = TARGETS["py"]
+            target_dir = ORGANIZER.targets["py"]
 
         elif SHEBANG_SH.match(header):
-            target_dir = TARGETS["sh"]
+            target_dir = ORGANIZER.targets["sh"]
 
     move_file(file, root_dir / target_dir)
 
@@ -87,7 +92,7 @@ def move(file: Path, root_dir: Path) -> None:
     :param root_dir: The root directory to move to
     """
 
-    if file.name in DIRECTORIES or file.name == ".DS_Store":
+    if file.name in ORGANIZER.directories or file.name == ".DS_Store":
         return
 
     elif file.is_dir():
@@ -105,8 +110,8 @@ def move(file: Path, root_dir: Path) -> None:
         xmp_files.append(file)
         return
 
-    target_dir = TARGETS[file_ext]
-    if target_dir == TARGETS["jpg"] or target_dir == TARGETS["dng"]:
+    target_dir = ORGANIZER.targets.get(file_ext, MISC_DIR)
+    if target_dir == ORGANIZER.targets["jpg"] or target_dir == ORGANIZER.targets["dng"]:
         move_image(file, root_dir / target_dir)
 
     else:
@@ -114,7 +119,7 @@ def move(file: Path, root_dir: Path) -> None:
 
 
 def main(root_dir: Path) -> None:
-    for directory in DIRECTORIES:
+    for directory in ORGANIZER.directories:
         (root_dir / directory).mkdir(parents=True, exist_ok=True)
 
     for file in root_dir.iterdir():
