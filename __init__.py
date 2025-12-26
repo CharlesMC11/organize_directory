@@ -7,8 +7,8 @@ from pathlib import Path
 
 TARGETS_FILE = Path(__file__).with_name("targets.cfg")
 
-SHEBANG_PY = re.compile(r"#!.*?python")
-SHEBANG_SH = re.compile(r"#!.*?sh")
+SHEBANG_PY = re.compile(rb"#!.*?python")
+SHEBANG_SH = re.compile(rb"#!.*?sh")
 
 MISC_DIR = "Misc"
 
@@ -53,8 +53,8 @@ def move_extensionless(file: Path, root_dir: Path) -> None:
 
     target_dir = MISC_DIR
     try:
-        with file.open() as f:
-            header = f.readline()
+        with file.open('rb') as f:
+            header = f.read(1024)
 
     except (IOError, UnicodeDecodeError):
         pass  # Do nothing because the target defaults to `MISC_DIR`
