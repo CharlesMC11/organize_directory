@@ -1,10 +1,13 @@
 __author__ = "Charles Mesa Cayobit"
 
+import re
 from collections import defaultdict
 from configparser import ConfigParser
 from pathlib import Path
 
 _TARGETS_FILE = Path(__file__).with_name("targets.cfg")
+SHEBANG_PY = re.compile(r"#!.*?python")
+SHEBANG_SH = re.compile(r"#!.*?sh")
 
 MISC_DIR = "Misc"
 
@@ -50,10 +53,10 @@ def move_extensionless(file: Path, root_dir: Path) -> None:
         pass  # Do nothing because the target defaults to `MISC_DIR`
 
     else:
-        if "python3" in header:
+        if SHEBANG_PY.match(header):
             target_dir = TARGETS["py"]
 
-        elif "sh" in header:
+        elif SHEBANG_SH.match(header):
             target_dir = TARGETS["sh"]
 
     move_file(file, root_dir / target_dir)
