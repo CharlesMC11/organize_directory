@@ -48,7 +48,7 @@ def move_extensionless(file: Path, root_dir: Path) -> None:
     target_dir = MISC_DIR
     try:
         with file.open() as f:
-            header = f.readline().lower()
+            header = f.readline()
 
     except (IOError, UnicodeDecodeError):
         pass  # Do nothing because the target defaults to `MISC_DIR`
