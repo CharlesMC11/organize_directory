@@ -5,7 +5,8 @@ from collections import defaultdict
 from configparser import ConfigParser
 from pathlib import Path
 
-_TARGETS_FILE = Path(__file__).with_name("targets.cfg")
+TARGETS_FILE = Path(__file__).with_name("targets.cfg")
+
 SHEBANG_PY = re.compile(r"#!.*?python")
 SHEBANG_SH = re.compile(r"#!.*?sh")
 
@@ -32,7 +33,7 @@ def read_targets_from_file(
     return directories, targets
 
 
-DIRECTORIES, TARGETS = read_targets_from_file(_TARGETS_FILE)
+DIRECTORIES, TARGETS = read_targets_from_file(TARGETS_FILE)
 
 
 def move_file(file: Path, target_dir: Path) -> None:
