@@ -1,6 +1,7 @@
 __author__ = "Charles Mesa Cayobit"
 
 import re
+import shutil
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -44,7 +45,7 @@ ORGANIZER = FileOrganizer(TARGETS_FILE)
 def move_file(file: Path, target_dir: Path) -> None:
     """Move `file` into `target_dir`."""
 
-    file.rename(target_dir / file.name)
+    shutil.move(file, target_dir)
 
 
 def move_extensionless(file: Path, root_dir: Path) -> None:
