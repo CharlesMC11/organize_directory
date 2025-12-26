@@ -75,38 +75,50 @@ def move_image(image_file: Path, target_dir: Path) -> None:
         pass  # Do nothing if a sidecar file does not exist.
 
 
-def main(root_dir: Path) -> None:
-    for dir in DIRECTORIES:
-        (root_dir / dir).mkdir(parents=True, exist_ok=True)
+# `move_image()` will move an image's existing sidecar file alongside the
+# image, so defer processing XMP files to the end.
+xmp_files: list[Path] = []
 
-    # `move_image()` will move an image's existing sidecar file alongside the
-    # image, so defer processing XMP files to the end.
-    xmp_files: list[Path] = []
+
+def move(file: Path, root_dir: Path) -> None:
+    """Move the file
+
+    :param file: The file to move
+    :param root_dir: The root directory to move to
+    """
+
+    if file.name in DIRECTORIES or file.name == ".DS_Store":
+        return
+
+    elif file.is_dir():
+        move_file(file, root_dir / MISC_DIR)
+        return
+
+    file_ext = file.suffix
+    if not file_ext:
+        move_extensionless(file, root_dir)
+        return
+
+    file_ext = file_ext[1:].lower()
+    if file_ext == "xmp":
+        global xmp_files
+        xmp_files.append(file)
+        return
+
+    target_dir = TARGETS[file_ext]
+    if target_dir == TARGETS["jpg"] or target_dir == TARGETS["dng"]:
+        move_image(file, root_dir / target_dir)
+
+    else:
+        move_file(file, root_dir / target_dir)
+
+
+def main(root_dir: Path) -> None:
+    for directory in DIRECTORIES:
+        (root_dir / directory).mkdir(parents=True, exist_ok=True)
 
     for file in root_dir.iterdir():
-        if file.name in DIRECTORIES or file.name == ".DS_Store":
-            continue
-
-        elif file.is_dir():
-            move_file(file, root_dir / MISC_DIR)
-            continue
-
-        file_ext = file.suffix
-        if not file_ext:
-            move_extensionless(file, root_dir)
-            continue
-
-        file_ext = file_ext[1:].lower()
-        if file_ext == "xmp":
-            xmp_files.append(file)
-            continue
-
-        target_dir = TARGETS[file_ext]
-        if target_dir == TARGETS["jpg"] or target_dir == TARGETS["dng"]:
-            move_image(file, root_dir / target_dir)
-
-        else:
-            move_file(file, root_dir / target_dir)
+        move(file, root_dir)
 
     for xmp_file in xmp_files:
         try:
