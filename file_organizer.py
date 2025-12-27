@@ -59,7 +59,7 @@ class FileOrganizer:
     def get_extensionless_dst(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
 
-        target_dir = self.MISC_DIR
+        destination_dir = self.MISC_DIR
         try:
             with file.open("rb") as f:
                 header = f.read(256)
@@ -72,28 +72,28 @@ class FileOrganizer:
                 if pattern.match(header):
                     return self.extensions_map.get(key, self.MISC_DIR)
 
-        return target_dir
+        return destination_dir
 
-    def organize(self, root_dir: Path) -> None:
-        """Organize the contents of `root_dir`."""
+    def organize(self, root: Path) -> None:
+        """Organize the contents of `root`."""
 
-        self._create_destination_dirs(root_dir)
+        self._create_destination_dirs(root)
 
-        # `move_file()` will move a file’s existing sidecar file alongside it, so defer processing XMP files to the end.
+        # `move_file()` will move a src’s existing sidecar src alongside it, so defer processing XMP files to the end.
         xmp_files: list[Path] = []
 
-        for file in root_dir.iterdir():
+        for file in root.iterdir():
             if file.name in self.destination_dirs or file.name == ".DS_Store":
                 continue
 
             elif file.is_dir():
-                shutil.move(file, root_dir / self.MISC_DIR)
+                shutil.move(file, root / self.MISC_DIR)
                 continue
 
             file_ext = file.suffix
             if not file_ext:
-                target_dir = self.get_extensionless_dst(file)
-                self.move_file_and_sidecar(file, root / target_dir)
+                destination_dir = self.get_extensionless_dst(file)
+                self.move_file_and_sidecar(file, root / destination_dir)
                 continue
 
             file_ext = file_ext.lstrip(".").lower()
@@ -101,31 +101,31 @@ class FileOrganizer:
                 xmp_files.append(file)
                 continue
 
-            target_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
-            self.move_file(file, root_dir / target_dir)
+            destination_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
+            self.move_file_and_sidecar(file, root / destination_dir)
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
-                shutil.move(xmp_file, root_dir / self.MISC_DIR)
+                shutil.move(xmp_file, root / self.MISC_DIR)
 
     # Public static methods
 
     @staticmethod
-    def move_file(file: Path, target_dir: Path) -> None:
-        """Move `file` and, if it exists, its sidecar file into `target_dir`."""
+    def move_file_and_sidecar(src: Path, dst: Path) -> None:
+        """Move a file and, if it exists, its sidecar from `src` into `dst`."""
 
-        shutil.move(file, target_dir)
+        shutil.move(src, dst)
 
-        sidecar_file = file.with_suffix(".xmp")
+        sidecar_file = src.with_suffix(".xmp")
         if sidecar_file.exists():
-            shutil.move(sidecar_file, target_dir)
+            shutil.move(sidecar_file, dst)
         else:
             logger.debug(f"{sidecar_file} does not exist, skipping")
 
     # Private methods
 
-    def _create_destination_dirs(self, root_dir: Path) -> None:
-        """Create the destination_dirs listed in the config file."""
+    def _create_destination_dirs(self, root: Path) -> None:
+        """Create the `destination_dirs` listed in the config file."""
 
-        for name in self.destination_dirs:
-            (root_dir / name).mkdir(parents=True, exist_ok=True)
+        for dst in self.destination_dirs:
+            (root / dst).mkdir(parents=True, exist_ok=True)

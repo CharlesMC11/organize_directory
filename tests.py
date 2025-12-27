@@ -95,8 +95,8 @@ def test_sidecar(organizer, tmp_path):
     assert img_target == tmp_path / "Images"
     assert raw_target == tmp_path / "Images/Raw"
 
-    organizer.move_file(img, img_target)
-    organizer.move_file(raw, raw_target)
+    organizer.move_file_and_sidecar(img, img_target)
+    organizer.move_file_and_sidecar(raw, raw_target)
 
     assert (img_target / "jpeg.jpeg").exists()
     assert (img_target / "jpeg.xmp").exists()
