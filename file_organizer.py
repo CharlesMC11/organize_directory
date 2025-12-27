@@ -4,6 +4,7 @@ import re
 import shutil
 from configparser import ConfigParser
 from pathlib import Path
+from types import MappingProxyType
 
 
 class FileOrganizer:
@@ -33,12 +34,16 @@ class FileOrganizer:
         self._targets = targets
 
     @property
-    def directories(self) -> set[str]:
-        return self._directories
+    def directories(self) -> frozenset[str]:
+        return frozenset(self._directories)
 
     @property
-    def targets(self) -> dict[str, str]:
-        return self._targets
+    def header_patterns(self) -> tuple[tuple[re.Pattern[bytes], str], ...]:
+        return tuple(self._header_patterns)
+
+    @property
+    def targets(self) -> MappingProxyType[str, str]:
+        return MappingProxyType(self._targets)
 
     def get_extensionless_target(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
