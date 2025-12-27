@@ -61,9 +61,13 @@ ORGANIZER = FileOrganizer(TARGETS_FILE)
 
 
 def move_file(file: Path, target_dir: Path) -> None:
-    """Move `file` into `target_dir`."""
+    """Move `file` and, if it exists, its sidecar file into `target_dir`."""
 
     shutil.move(file, target_dir)
+
+    sidecar_file = file.with_suffix(".xmp")
+    if sidecar_file.exists():
+        shutil.move(sidecar_file, target_dir)
 
 
 def move_extensionless(file: Path, root_dir: Path) -> None:
@@ -72,18 +76,6 @@ def move_extensionless(file: Path, root_dir: Path) -> None:
     target_dir = ORGANIZER.get_extensionless_target(file)
 
     move_file(file, root_dir / target_dir)
-
-
-def move_image(image_file: Path, target_dir: Path) -> None:
-    """Move an image and its sidecar file to `target_dir`."""
-
-    move_file(image_file, target_dir)
-
-    sidecar_file = image_file.with_suffix(".xmp")
-    try:
-        move_file(sidecar_file, target_dir)
-    except FileNotFoundError:
-        pass  # Do nothing if a sidecar file does not exist.
 
 
 # `move_image()` will move an image's existing sidecar file alongside the
@@ -117,11 +109,8 @@ def move(file: Path, root_dir: Path) -> None:
         return
 
     target_dir = ORGANIZER.targets.get(file_ext, ORGANIZER.MISC_DIR)
-    if target_dir == ORGANIZER.targets["jpg"] or target_dir == ORGANIZER.targets["dng"]:
-        move_image(file, root_dir / target_dir)
 
-    else:
-        move_file(file, root_dir / target_dir)
+    move_file(file, root_dir / target_dir)
 
 
 def main(root_dir: Path) -> None:
