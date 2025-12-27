@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import pytest
@@ -66,31 +67,50 @@ def test_sidecar(organizer, tmp_path):
 
     img = tmp_path / "jpeg.jpeg"
     img.write_text("Some image")
-    img_target = tmp_path / organizer.targets[img.suffix.lstrip(".")]
 
     xmp = tmp_path / "jpeg.xmp"
     xmp.write_text("Some sidecar")
 
     raw = tmp_path / "raw.dng"
     raw.write_text("Some image raw data")
-    raw_target = tmp_path / organizer.targets[raw.suffix.lstrip(".")]
 
     xmp2 = tmp_path / "raw.xmp"
     xmp2.write_text("Some sidecar")
 
-    organizer.move_file(img, img_target)
-    organizer.move_file(raw, raw_target)
+    xmp3 = tmp_path / "xmp.xmp"
+    xmp3.write_text("Some dangling xmp file")
+
+    img_target = tmp_path / organizer.targets.get(
+        img.suffix.lstrip("."), organizer.MISC_DIR
+    )
+    raw_target = tmp_path / organizer.targets.get(
+        raw.suffix.lstrip("."), organizer.MISC_DIR
+    )
+    xmp_target = tmp_path / organizer.targets.get(
+        xmp3.suffix.lstrip("."), organizer.MISC_DIR
+    )
 
     assert img_target == tmp_path / "Images"
     assert raw_target == tmp_path / "Images/Raw"
 
-    assert (img_target / 'jpeg.jpeg').exists()
-    assert (img_target / 'jpeg.xmp').exists()
+    organizer.move_file(img, img_target)
+    organizer.move_file(raw, raw_target)
 
-    assert (raw_target / 'raw.dng').exists()
-    assert (raw_target / 'raw.xmp').exists()
+    assert (img_target / "jpeg.jpeg").exists()
+    assert (img_target / "jpeg.xmp").exists()
+
+    assert (raw_target / "raw.dng").exists()
+    assert (raw_target / "raw.xmp").exists()
 
     assert not img.exists()
-    assert not xmp.exists()
     assert not raw.exists()
-    assert not xmp2.exists()
+
+    for f in xmp, xmp2, xmp3:
+        try:
+            shutil.move(f, xmp_target)
+
+        except FileNotFoundError:
+            assert not f.exists()
+
+        else:
+            assert (xmp_target / "xmp.xmp").exists()
