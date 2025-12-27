@@ -3,10 +3,11 @@ __author__ = "Charles Mesa Cayobit"
 import logging
 import re
 import shutil
+from collections.abc import Mapping, Iterable, Sequence
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
-from typing import Final
+from typing import Final, Self
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -19,14 +20,15 @@ class FileOrganizer:
 
     MISC_DIR: Final = "Misc"
 
-    # Magic methods
+    # Class methods
 
-    def __init__(self, targets_file: Path) -> None:
+    @classmethod
+    def from_ini(cls, file: Path) -> Self:
         parser = ConfigParser()
-        parser.read(targets_file)
+        parser.read(file)
 
         destinations = set(parser["destinations"].values())
-        destinations.add(self.MISC_DIR)
+        destinations.add(cls.MISC_DIR)
 
         identity_patterns = [
             (re.compile(pattern.encode()), key)
@@ -38,6 +40,16 @@ class FileOrganizer:
             for file_extension, target_path in parser["extensions_map"].items()
         }
 
+        return cls(destinations, identity_patterns, extensions_map)
+
+    # Magic methods
+
+    def __init__(
+            self,
+            destinations: Iterable[str],
+            identity_patterns: Sequence[tuple[re.Pattern[bytes], str]],
+            extensions_map: Mapping[str, str],
+    ) -> None:
         self.destinations: Final = frozenset(destinations)
         self.identity_patterns: Final = tuple(identity_patterns)
         self.extensions_map: Final = MappingProxyType(extensions_map)

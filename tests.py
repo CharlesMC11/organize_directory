@@ -33,7 +33,7 @@ def organizer(tmp_path):
     conf = tmp_path / "conf.cfg"
     conf.write_text(TEST_CONFIG)
 
-    return FileOrganizer(conf)
+    return FileOrganizer.from_ini(conf)
 
 
 def test_extensionless(organizer, tmp_path):
