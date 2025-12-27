@@ -15,4 +15,4 @@ if __name__ == "__main__":
     targets_file = Path(__file__).with_name("targets.cfg")
 
     organizer = FileOrganizer(targets_file)
-    organizer.main(args.dir)
+    organizer.organize(args.dir)

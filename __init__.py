@@ -52,17 +52,7 @@ class FileOrganizer:
 
         return target_dir
 
-    @staticmethod
-    def move_file(file: Path, target_dir: Path) -> None:
-        """Move `file` and, if it exists, its sidecar file into `target_dir`."""
-
-        shutil.move(file, target_dir)
-
-        sidecar_file = file.with_suffix(".xmp")
-        if sidecar_file.exists():
-            shutil.move(sidecar_file, target_dir)
-
-    def main(self, root_dir: Path) -> None:
+    def organize(self, root_dir: Path) -> None:
         for directory in self.directories:
             (root_dir / directory).mkdir(parents=True, exist_ok=True)
 
@@ -94,3 +84,13 @@ class FileOrganizer:
         for xmp_file in xmp_files:
             if xmp_file.exists():
                 self.move_file(xmp_file, root_dir / self.MISC_DIR)
+
+    @staticmethod
+    def move_file(file: Path, target_dir: Path) -> None:
+        """Move `file` and, if it exists, its sidecar file into `target_dir`."""
+
+        shutil.move(file, target_dir)
+
+        sidecar_file = file.with_suffix(".xmp")
+        if sidecar_file.exists():
+            shutil.move(sidecar_file, target_dir)
