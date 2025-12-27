@@ -52,19 +52,18 @@ class FileOrganizer:
 
         return target_dir
 
+    @staticmethod
+    def move_file(file: Path, target_dir: Path) -> None:
+        """Move `file` and, if it exists, its sidecar file into `target_dir`."""
+
+        shutil.move(file, target_dir)
+
+        sidecar_file = file.with_suffix(".xmp")
+        if sidecar_file.exists():
+            shutil.move(sidecar_file, target_dir)
+
 
 ORGANIZER = FileOrganizer(TARGETS_FILE)
-
-
-def move_file(file: Path, target_dir: Path) -> None:
-    """Move `file` and, if it exists, its sidecar file into `target_dir`."""
-
-    shutil.move(file, target_dir)
-
-    sidecar_file = file.with_suffix(".xmp")
-    if sidecar_file.exists():
-        shutil.move(sidecar_file, target_dir)
-
 
 # `move_image()` will move an image's existing sidecar file alongside the
 # image, so defer processing XMP files to the end.
@@ -82,13 +81,13 @@ def move(file: Path, root_dir: Path) -> None:
         return
 
     elif file.is_dir():
-        move_file(file, root_dir / ORGANIZER.MISC_DIR)
+        FileOrganizer.move_file(file, root_dir / ORGANIZER.MISC_DIR)
         return
 
     file_ext = file.suffix
     if not file_ext:
         target_dir = ORGANIZER.get_extensionless_target(file)
-        move_file(file, root_dir / target_dir)
+        FileOrganizer.move_file(file, root_dir / target_dir)
         return
 
     file_ext = file_ext.lstrip(".").lower()
@@ -99,7 +98,7 @@ def move(file: Path, root_dir: Path) -> None:
 
     target_dir = ORGANIZER.targets.get(file_ext, ORGANIZER.MISC_DIR)
 
-    move_file(file, root_dir / target_dir)
+    FileOrganizer.move_file(file, root_dir / target_dir)
 
 
 def main(root_dir: Path) -> None:
@@ -111,6 +110,6 @@ def main(root_dir: Path) -> None:
 
     for xmp_file in xmp_files:
         try:
-            move_file(xmp_file, root_dir / ORGANIZER.MISC_DIR)
+            FileOrganizer.move_file(xmp_file, root_dir / ORGANIZER.MISC_DIR)
         except FileNotFoundError:
             pass  # Do nothing if the image sidecar file had already been moved.
