@@ -125,6 +125,7 @@ class FileOrganizer:
     # Private methods
 
     def _create_subdirectories(self, root_dir: Path) -> None:
+        """Create the subdirectories listed in the config file."""
 
         for name in self._directories:
             (root_dir / name).mkdir(parents=True, exist_ok=True)
