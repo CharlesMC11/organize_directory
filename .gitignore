@@ -1,5 +1,7 @@
 __pycache__/
-*.py[codz]
+*.pyc
+.python-version
+.venv
 
 .ruff_cache/
 
