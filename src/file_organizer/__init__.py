@@ -1,9 +1,11 @@
+"""Class for organizing files and directories."""
+
 __author__ = "Charles Mesa Cayobit"
 
 import logging
 import re
 import shutil
-from collections.abc import Mapping, Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
@@ -28,7 +30,6 @@ class FileOrganizer:
 
         Expected headers are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
-
         parser = ConfigParser()
         parser.read(file)
 
@@ -55,6 +56,7 @@ class FileOrganizer:
             signature_patterns: Sequence[tuple[re.Pattern[bytes], str]],
             extensions_map: Mapping[str, str],
     ) -> None:
+        """Load the organizer’s configurations."""
         self.destination_dirs: Final = frozenset(destination_dirs)
         self.signature_patterns: Final = tuple(signature_patterns)
         self.extensions_map: Final = MappingProxyType(extensions_map)
@@ -63,13 +65,12 @@ class FileOrganizer:
 
     def get_extensionless_dst(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
-
         destination_dir = self.MISC_DIR
         try:
             with file.open("rb") as f:
                 header = f.read(256)
 
-        except (IOError, PermissionError) as e:
+        except (OSError, PermissionError) as e:
             logger.error(f"Could not open file {file.name}: {e}")
 
         else:
@@ -81,10 +82,10 @@ class FileOrganizer:
 
     def organize(self, root: Path) -> None:
         """Organize the contents of `root`."""
-
         self._create_destination_dirs(root)
 
-        # `move_file()` will move a src’s existing sidecar src alongside it, so defer processing XMP files to the end.
+        # `move_file()` will move a src’s existing sidecar src alongside it, so
+        # defer processing XMP files to the end.
         xmp_files: list[Path] = []
 
         for file in root.iterdir():
@@ -118,7 +119,6 @@ class FileOrganizer:
     @staticmethod
     def move_file_and_sidecar(src: Path, dst: Path) -> None:
         """Move a file and, if it exists, its sidecar from `src` into `dst`."""
-
         shutil.move(src, dst)
 
         sidecar_file = src.with_suffix(".xmp")
@@ -131,6 +131,5 @@ class FileOrganizer:
 
     def _create_destination_dirs(self, root: Path) -> None:
         """Create the `destination_dirs` listed in the config file."""
-
         for dst in self.destination_dirs:
             (root / dst).mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-"""A CLI script to organize the contents of a directory"""
+"""A CLI script to organize the contents of a directory."""
 
 __author__ = "Charles Mesa Cayobit"
 
@@ -14,5 +14,5 @@ if __name__ == "__main__":
 
     targets_file = Path(__file__).with_name("targets.cfg")
 
-    organizer = FileOrganizer(targets_file)
+    organizer = FileOrganizer.from_ini(targets_file)
     organizer.organize(args.dir)
