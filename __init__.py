@@ -37,6 +37,8 @@ class FileOrganizer:
         return self._targets
 
     def get_extensionless_target(self, file: Path) -> str:
+        """Get the target directory for a file without an extension."""
+
         target_dir = self.MISC_DIR
         try:
             with file.open("rb") as f:
