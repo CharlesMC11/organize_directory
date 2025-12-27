@@ -39,16 +39,16 @@ def organizer(tmp_path):
 def test_extensionless(organizer, tmp_path):
     python = tmp_path / "python"
     python.write_text('#!/usr/bin/env -S python3\n\nprint("Hello, World!")\n')
-    python_target = organizer.get_extensionless_target(python)
+    python_target = organizer.get_extensionless_dst(python)
 
     bash = tmp_path / "bash"
     bash.write_text("#!/usr/bin/env -S bash\n\necho 'Hello, World!'\n")
-    bash_target = organizer.get_extensionless_target(bash)
+    bash_target = organizer.get_extensionless_dst(bash)
 
     zipfile = tmp_path / "zip"
     with ZipFile(zipfile, mode="x") as f:
         f.write(python)
-    zipfile_target = organizer.get_extensionless_target(zipfile)
+    zipfile_target = organizer.get_extensionless_dst(zipfile)
 
     assert python_target == organizer.extensions_map["py"]
     assert bash_target == organizer.extensions_map["sh"]
@@ -59,7 +59,7 @@ def test_misc_fallback(organizer, tmp_path):
     f = tmp_path / "unknown"
     f.write_text("Some unknown file")
 
-    target = organizer.get_extensionless_target(f)
+    target = organizer.get_extensionless_dst(f)
 
     assert target == organizer.MISC_DIR
 

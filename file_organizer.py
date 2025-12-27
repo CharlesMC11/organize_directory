@@ -56,7 +56,7 @@ class FileOrganizer:
 
     # Public methods
 
-    def get_extensionless_target(self, file: Path) -> str:
+    def get_extensionless_dst(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
 
         target_dir = self.MISC_DIR
@@ -92,9 +92,8 @@ class FileOrganizer:
 
             file_ext = file.suffix
             if not file_ext:
-                target_dir = self.get_extensionless_target(file)
-                self.move_file(file, root_dir / target_dir)
                 target_dir = self.get_extensionless_dst(file)
+                self.move_file_and_sidecar(file, root / target_dir)
                 continue
 
             file_ext = file_ext.lstrip(".").lower()
