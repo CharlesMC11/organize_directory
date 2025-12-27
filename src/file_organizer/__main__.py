@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser.add_argument("dir", type=Path, help="the directory to organize")
     args = parser.parse_args()
 
-    targets_file = Path(__file__).with_name("targets.cfg")
+    targets_file = Path(__file__).with_name("extensions_map.cfg")
 
     organizer = FileOrganizer.from_ini(targets_file)
     organizer.organize(args.dir)
