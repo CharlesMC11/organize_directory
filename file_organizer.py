@@ -27,8 +27,6 @@ class FileOrganizer:
             for file_extension, target_path in parser["targets"].items()
         }
 
-        print(header_patterns)
-
         self._directories = directories
         self._header_patterns = header_patterns
         self._targets = targets
