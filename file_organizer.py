@@ -61,8 +61,8 @@ class FileOrganizer:
         return target_dir
 
     def organize(self, root_dir: Path) -> None:
-        for directory in self._directories:
-            root_dir.joinpath(directory).mkdir(parents=True, exist_ok=True)
+
+        self._create_subdirectories(root_dir)
 
         # `move_file()` will move a file’s existing sidecar file alongside it, so defer processing XMP files to the end.
         xmp_files: list[Path] = []
@@ -102,3 +102,8 @@ class FileOrganizer:
         sidecar_file = file.with_suffix(".xmp")
         if sidecar_file.exists():
             shutil.move(sidecar_file, target_dir)
+
+    def _create_subdirectories(self, root_dir: Path) -> None:
+
+        for name in self._directories:
+            (root_dir / name).mkdir(parents=True, exist_ok=True)
