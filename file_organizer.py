@@ -6,6 +6,7 @@ import shutil
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
+from typing import Final
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -16,7 +17,7 @@ class FileOrganizer:
 
     # Class attributes
 
-    MISC_DIR = "Misc"
+    MISC_DIR: Final = "Misc"
 
     # Magic methods
 
@@ -37,23 +38,9 @@ class FileOrganizer:
             for file_extension, target_path in parser["targets"].items()
         }
 
-        self._subdirectories = subdirectories
-        self._header_patterns = header_patterns
-        self._targets = targets
-
-    # Properties
-
-    @property
-    def subdirectories(self) -> frozenset[str]:
-        return frozenset(self._subdirectories)
-
-    @property
-    def header_patterns(self) -> tuple[tuple[re.Pattern[bytes], str], ...]:
-        return tuple(self._header_patterns)
-
-    @property
-    def targets(self) -> MappingProxyType[str, str]:
-        return MappingProxyType(self._targets)
+        self.subdirectories: Final = frozenset(subdirectories)
+        self.header_patterns: Final = tuple(header_patterns)
+        self.targets: Final = MappingProxyType(targets)
 
     # Public methods
 
@@ -69,9 +56,9 @@ class FileOrganizer:
             logger.error(f"Could not open file {file.name}: {e}")
 
         else:
-            for pattern, key in self._header_patterns:
+            for pattern, key in self.header_patterns:
                 if pattern.match(header):
-                    return self._targets.get(key, self.MISC_DIR)
+                    return self.targets.get(key, self.MISC_DIR)
 
         return target_dir
 
@@ -84,7 +71,7 @@ class FileOrganizer:
         xmp_files: list[Path] = []
 
         for file in root_dir.iterdir():
-            if file.name in self._subdirectories or file.name == ".DS_Store":
+            if file.name in self.subdirectories or file.name == ".DS_Store":
                 continue
 
             elif file.is_dir():
@@ -102,7 +89,7 @@ class FileOrganizer:
                 xmp_files.append(file)
                 continue
 
-            target_dir = self._targets.get(file_ext, self.MISC_DIR)
+            target_dir = self.targets.get(file_ext, self.MISC_DIR)
             self.move_file(file, root_dir / target_dir)
 
         for xmp_file in xmp_files:
@@ -128,5 +115,5 @@ class FileOrganizer:
     def _create_subdirectories(self, root_dir: Path) -> None:
         """Create the subdirectories listed in the config file."""
 
-        for name in self._subdirectories:
+        for name in self.subdirectories:
             (root_dir / name).mkdir(parents=True, exist_ok=True)
