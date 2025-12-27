@@ -24,8 +24,8 @@ class FileOrganizer:
         parser = ConfigParser()
         parser.read(targets_file)
 
-        directories = set(parser["directories"].values())
-        directories.add(self.MISC_DIR)
+        subdirectories = set(parser["subdirectories"].values())
+        subdirectories.add(self.MISC_DIR)
 
         header_patterns = [
             (re.compile(pattern.encode()), key)
@@ -33,19 +33,19 @@ class FileOrganizer:
         ]
 
         targets = {
-            file_extension: parser["directories"][target_path]
+            file_extension: parser["subdirectories"][target_path]
             for file_extension, target_path in parser["targets"].items()
         }
 
-        self._directories = directories
+        self._subdirectories = subdirectories
         self._header_patterns = header_patterns
         self._targets = targets
 
     # Properties
 
     @property
-    def directories(self) -> frozenset[str]:
-        return frozenset(self._directories)
+    def subdirectories(self) -> frozenset[str]:
+        return frozenset(self._subdirectories)
 
     @property
     def header_patterns(self) -> tuple[tuple[re.Pattern[bytes], str], ...]:
@@ -84,7 +84,7 @@ class FileOrganizer:
         xmp_files: list[Path] = []
 
         for file in root_dir.iterdir():
-            if file.name in self._directories or file.name == ".DS_Store":
+            if file.name in self._subdirectories or file.name == ".DS_Store":
                 continue
 
             elif file.is_dir():
@@ -128,5 +128,5 @@ class FileOrganizer:
     def _create_subdirectories(self, root_dir: Path) -> None:
         """Create the subdirectories listed in the config file."""
 
-        for name in self._directories:
+        for name in self._subdirectories:
             (root_dir / name).mkdir(parents=True, exist_ok=True)

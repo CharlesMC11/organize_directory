@@ -6,7 +6,7 @@ import pytest
 from file_organizer import FileOrganizer
 
 TEST_CONFIG = """
-[directories]
+[subdirectories]
 archives = Archives
 images = Images
 images_raw = Images/Raw
