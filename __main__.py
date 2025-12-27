@@ -5,7 +5,7 @@ __author__ = "Charles Mesa Cayobit"
 from argparse import ArgumentParser
 from pathlib import Path
 
-from organize_directory import FileOrganizer
+from file_organizer import FileOrganizer
 
 if __name__ == "__main__":
     parser = ArgumentParser(prog="Organize Directory", description=__doc__)
