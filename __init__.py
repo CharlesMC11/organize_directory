@@ -66,14 +66,6 @@ def move_file(file: Path, target_dir: Path) -> None:
         shutil.move(sidecar_file, target_dir)
 
 
-def move_extensionless(file: Path, root_dir: Path) -> None:
-    """Move a file without an extension."""
-
-    target_dir = ORGANIZER.get_extensionless_target(file)
-
-    move_file(file, root_dir / target_dir)
-
-
 # `move_image()` will move an image's existing sidecar file alongside the
 # image, so defer processing XMP files to the end.
 xmp_files: list[Path] = []
@@ -95,7 +87,8 @@ def move(file: Path, root_dir: Path) -> None:
 
     file_ext = file.suffix
     if not file_ext:
-        move_extensionless(file, root_dir)
+        target_dir = ORGANIZER.get_extensionless_target(file)
+        move_file(file, root_dir / target_dir)
         return
 
     file_ext = file_ext.lstrip(".").lower()
