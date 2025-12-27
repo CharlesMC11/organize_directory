@@ -39,6 +39,23 @@ class FileOrganizer:
     def targets(self) -> dict[str, str]:
         return self._targets
 
+    def get_extensionless_target(self, file: Path) -> str:
+
+        target_dir = self.MISC_DIR
+        try:
+            with file.open('rb') as f:
+                header = f.read(1024)
+
+        except (IOError, UnicodeDecodeError):
+            pass  # Do nothing because the target defaults to `MISC_DIR`
+
+        else:
+            for pattern, key in self.HEADERS:
+                if pattern.match(header):
+                    return self.targets.get(key, self.MISC_DIR)
+
+        return target_dir
+
 
 ORGANIZER = FileOrganizer(TARGETS_FILE)
 
@@ -52,19 +69,7 @@ def move_file(file: Path, target_dir: Path) -> None:
 def move_extensionless(file: Path, root_dir: Path) -> None:
     """Move a file without an extension."""
 
-    target_dir = ORGANIZER.MISC_DIR
-    try:
-        with file.open('rb') as f:
-            header = f.read(1024)
-
-    except (IOError, UnicodeDecodeError):
-        pass  # Do nothing because the target defaults to `MISC_DIR`
-
-    else:
-        for pattern, key in FileOrganizer.HEADERS:
-            if pattern.match(header):
-                target_dir = ORGANIZER.targets[key]
-                break
+    target_dir = ORGANIZER.get_extensionless_target(file)
 
     move_file(file, root_dir / target_dir)
 
