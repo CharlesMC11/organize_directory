@@ -7,8 +7,6 @@ from pathlib import Path
 
 
 class FileOrganizer:
-    HEADERS = ((re.compile(rb"#!.*?python"), "py"), (re.compile(rb"#!.*?sh"), "sh"))
-
     MISC_DIR = "Misc"
 
     def __init__(self, targets_file: Path) -> None:
@@ -18,12 +16,20 @@ class FileOrganizer:
         directories = set(parser["directories"].values())
         directories.add(self.MISC_DIR)
 
+        header_patterns = [
+            (re.compile(pattern.encode()), key)
+            for key, pattern in parser["header_patterns"].items()
+        ]
+
         targets = {
             file_extension: parser["directories"][target_path]
             for file_extension, target_path in parser["targets"].items()
         }
 
+        print(header_patterns)
+
         self._directories = directories
+        self._header_patterns = header_patterns
         self._targets = targets
 
     @property
@@ -46,7 +52,7 @@ class FileOrganizer:
             pass  # Do nothing because the target defaults to `MISC_DIR`
 
         else:
-            for pattern, key in self.HEADERS:
+            for pattern, key in self._header_patterns:
                 if pattern.match(header):
                     return self._targets.get(key, self.MISC_DIR)
 
