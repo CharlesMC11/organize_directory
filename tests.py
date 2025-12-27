@@ -6,7 +6,7 @@ import pytest
 from file_organizer import FileOrganizer
 
 TEST_CONFIG = """
-[subdirectories]
+[destinations]
 archives = Archives
 images = Images
 images_raw = Images/Raw
@@ -14,12 +14,12 @@ programming = Programming
 python = Programming/Python
 shell = Programming/Shell
 
-[header_patterns]
+[identity_patterns]
 py = #!/.+?python
 sh = #!/.+?sh
 zip = PK\x03\x04
 
-[targets]
+[extensions_map]
 jpeg = images
 dng = images_raw
 py = python
@@ -50,9 +50,9 @@ def test_extensionless(organizer, tmp_path):
         f.write(python)
     zipfile_target = organizer.get_extensionless_target(zipfile)
 
-    assert python_target == organizer.targets["py"]
-    assert bash_target == organizer.targets["sh"]
-    assert zipfile_target == organizer.targets["zip"]
+    assert python_target == organizer.extensions_map["py"]
+    assert bash_target == organizer.extensions_map["sh"]
+    assert zipfile_target == organizer.extensions_map["zip"]
 
 
 def test_misc_fallback(organizer, tmp_path):
@@ -82,13 +82,13 @@ def test_sidecar(organizer, tmp_path):
     xmp3 = tmp_path / "xmp.xmp"
     xmp3.write_text("Some dangling xmp file")
 
-    img_target = tmp_path / organizer.targets.get(
+    img_target = tmp_path / organizer.extensions_map.get(
         img.suffix.lstrip("."), organizer.MISC_DIR
     )
-    raw_target = tmp_path / organizer.targets.get(
+    raw_target = tmp_path / organizer.extensions_map.get(
         raw.suffix.lstrip("."), organizer.MISC_DIR
     )
-    xmp_target = tmp_path / organizer.targets.get(
+    xmp_target = tmp_path / organizer.extensions_map.get(
         xmp3.suffix.lstrip("."), organizer.MISC_DIR
     )
 

@@ -25,22 +25,22 @@ class FileOrganizer:
         parser = ConfigParser()
         parser.read(targets_file)
 
-        subdirectories = set(parser["subdirectories"].values())
-        subdirectories.add(self.MISC_DIR)
+        destinations = set(parser["destinations"].values())
+        destinations.add(self.MISC_DIR)
 
-        header_patterns = [
+        identity_patterns = [
             (re.compile(pattern.encode()), key)
-            for key, pattern in parser["header_patterns"].items()
+            for key, pattern in parser["identity_patterns"].items()
         ]
 
-        targets = {
-            file_extension: parser["subdirectories"][target_path]
-            for file_extension, target_path in parser["targets"].items()
+        extensions_map = {
+            file_extension: parser["destinations"][target_path]
+            for file_extension, target_path in parser["extensions_map"].items()
         }
 
-        self.subdirectories: Final = frozenset(subdirectories)
-        self.header_patterns: Final = tuple(header_patterns)
-        self.targets: Final = MappingProxyType(targets)
+        self.destinations: Final = frozenset(destinations)
+        self.identity_patterns: Final = tuple(identity_patterns)
+        self.extensions_map: Final = MappingProxyType(extensions_map)
 
     # Public methods
 
@@ -56,9 +56,9 @@ class FileOrganizer:
             logger.error(f"Could not open file {file.name}: {e}")
 
         else:
-            for pattern, key in self.header_patterns:
+            for pattern, key in self.identity_patterns:
                 if pattern.match(header):
-                    return self.targets.get(key, self.MISC_DIR)
+                    return self.extensions_map.get(key, self.MISC_DIR)
 
         return target_dir
 
@@ -71,7 +71,7 @@ class FileOrganizer:
         xmp_files: list[Path] = []
 
         for file in root_dir.iterdir():
-            if file.name in self.subdirectories or file.name == ".DS_Store":
+            if file.name in self.destinations or file.name == ".DS_Store":
                 continue
 
             elif file.is_dir():
@@ -89,7 +89,7 @@ class FileOrganizer:
                 xmp_files.append(file)
                 continue
 
-            target_dir = self.targets.get(file_ext, self.MISC_DIR)
+            target_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
             self.move_file(file, root_dir / target_dir)
 
         for xmp_file in xmp_files:
@@ -113,7 +113,7 @@ class FileOrganizer:
     # Private methods
 
     def _create_subdirectories(self, root_dir: Path) -> None:
-        """Create the subdirectories listed in the config file."""
+        """Create the destinations listed in the config file."""
 
-        for name in self.subdirectories:
+        for name in self.destinations:
             (root_dir / name).mkdir(parents=True, exist_ok=True)
