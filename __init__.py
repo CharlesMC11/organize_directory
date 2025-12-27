@@ -7,8 +7,6 @@ from pathlib import Path
 
 TARGETS_FILE = Path(__file__).with_name("targets.cfg")
 
-MISC_DIR = "Misc"
-
 
 class FileOrganizer:
     HEADERS = (
@@ -16,12 +14,14 @@ class FileOrganizer:
         (re.compile(rb"#!.*?sh"), 'sh')
     )
 
+    MISC_DIR = "Misc"
+
     def __init__(self, targets_file: Path) -> None:
         parser = ConfigParser()
         parser.read(targets_file)
 
         directories = set(parser["directories"].values())
-        directories.add(MISC_DIR)
+        directories.add(self.MISC_DIR)
 
         targets = {
             file_extension: parser["directories"][target_path]
@@ -52,7 +52,7 @@ def move_file(file: Path, target_dir: Path) -> None:
 def move_extensionless(file: Path, root_dir: Path) -> None:
     """Move a file without an extension."""
 
-    target_dir = MISC_DIR
+    target_dir = ORGANIZER.MISC_DIR
     try:
         with file.open('rb') as f:
             header = f.read(1024)
@@ -97,7 +97,7 @@ def move(file: Path, root_dir: Path) -> None:
         return
 
     elif file.is_dir():
-        move_file(file, root_dir / MISC_DIR)
+        move_file(file, root_dir / ORGANIZER.MISC_DIR)
         return
 
     file_ext = file.suffix
@@ -111,7 +111,7 @@ def move(file: Path, root_dir: Path) -> None:
         xmp_files.append(file)
         return
 
-    target_dir = ORGANIZER.targets.get(file_ext, MISC_DIR)
+    target_dir = ORGANIZER.targets.get(file_ext, ORGANIZER.MISC_DIR)
     if target_dir == ORGANIZER.targets["jpg"] or target_dir == ORGANIZER.targets["dng"]:
         move_image(file, root_dir / target_dir)
 
@@ -128,6 +128,6 @@ def main(root_dir: Path) -> None:
 
     for xmp_file in xmp_files:
         try:
-            move_file(xmp_file, root_dir / MISC_DIR)
+            move_file(xmp_file, root_dir / ORGANIZER.MISC_DIR)
         except FileNotFoundError:
             pass  # Do nothing if the image sidecar file had already been moved.
