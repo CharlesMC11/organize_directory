@@ -48,19 +48,19 @@ class FileOrganizer:
         else:
             for pattern, key in self.HEADERS:
                 if pattern.match(header):
-                    return self.targets.get(key, self.MISC_DIR)
+                    return self._targets.get(key, self.MISC_DIR)
 
         return target_dir
 
     def organize(self, root_dir: Path) -> None:
-        for directory in self.directories:
+        for directory in self._directories:
             (root_dir / directory).mkdir(parents=True, exist_ok=True)
 
         # `move_file()` will move a file’s existing sidecar file alongside it, so defer processing XMP files to the end.
         xmp_files: list[Path] = []
 
         for file in root_dir.iterdir():
-            if file.name in self.directories or file.name == ".DS_Store":
+            if file.name in self._directories or file.name == ".DS_Store":
                 continue
 
             elif file.is_dir():
@@ -78,7 +78,7 @@ class FileOrganizer:
                 xmp_files.append(file)
                 continue
 
-            target_dir = self.targets.get(file_ext, self.MISC_DIR)
+            target_dir = self._targets.get(file_ext, self.MISC_DIR)
             self.move_file(file, root_dir / target_dir)
 
         for xmp_file in xmp_files:
