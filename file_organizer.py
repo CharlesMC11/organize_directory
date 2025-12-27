@@ -51,8 +51,7 @@ class FileOrganizer:
             with file.open("rb") as f:
                 header = f.read(1024)
 
-        except IOError:
-            pass  # Do nothing because the target defaults to `MISC_DIR`
+        except (IOError, PermissionError) as e:
 
         else:
             for pattern, key in self._header_patterns:
