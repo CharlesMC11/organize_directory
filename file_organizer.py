@@ -49,7 +49,7 @@ class FileOrganizer:
         target_dir = self.MISC_DIR
         try:
             with file.open("rb") as f:
-                header = f.read(1024)
+                header = f.read(256)
 
         except (IOError, PermissionError) as e:
 
