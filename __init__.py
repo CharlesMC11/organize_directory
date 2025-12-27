@@ -9,10 +9,7 @@ TARGETS_FILE = Path(__file__).with_name("targets.cfg")
 
 
 class FileOrganizer:
-    HEADERS = (
-        (re.compile(rb"#!.*?python"), 'py'),
-        (re.compile(rb"#!.*?sh"), 'sh')
-    )
+    HEADERS = ((re.compile(rb"#!.*?python"), "py"), (re.compile(rb"#!.*?sh"), "sh"))
 
     MISC_DIR = "Misc"
 
@@ -40,10 +37,9 @@ class FileOrganizer:
         return self._targets
 
     def get_extensionless_target(self, file: Path) -> str:
-
         target_dir = self.MISC_DIR
         try:
-            with file.open('rb') as f:
+            with file.open("rb") as f:
                 header = f.read(1024)
 
         except (IOError, UnicodeDecodeError):
