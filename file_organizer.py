@@ -54,7 +54,7 @@ class FileOrganizer:
 
     def organize(self, root_dir: Path) -> None:
         for directory in self._directories:
-            (root_dir / directory).mkdir(parents=True, exist_ok=True)
+            root_dir.joinpath(directory).mkdir(parents=True, exist_ok=True)
 
         # `move_file()` will move a file’s existing sidecar file alongside it, so defer processing XMP files to the end.
         xmp_files: list[Path] = []
