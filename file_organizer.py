@@ -27,8 +27,8 @@ class FileOrganizer:
         parser = ConfigParser()
         parser.read(file)
 
-        destinations = set(parser["destinations"].values())
-        destinations.add(cls.MISC_DIR)
+        destination_dirs = set(parser["destination_dirs"].values())
+        destination_dirs.add(cls.MISC_DIR)
 
         identity_patterns = [
             (re.compile(pattern.encode()), key)
@@ -36,21 +36,21 @@ class FileOrganizer:
         ]
 
         extensions_map = {
-            file_extension: parser["destinations"][target_path]
+            file_extension: parser["destination_dirs"][target_path]
             for file_extension, target_path in parser["extensions_map"].items()
         }
 
-        return cls(destinations, identity_patterns, extensions_map)
+        return cls(destination_dirs, identity_patterns, extensions_map)
 
     # Magic methods
 
     def __init__(
             self,
-            destinations: Iterable[str],
+            destination_dirs: Iterable[str],
             identity_patterns: Sequence[tuple[re.Pattern[bytes], str]],
             extensions_map: Mapping[str, str],
     ) -> None:
-        self.destinations: Final = frozenset(destinations)
+        self.destination_dirs: Final = frozenset(destination_dirs)
         self.identity_patterns: Final = tuple(identity_patterns)
         self.extensions_map: Final = MappingProxyType(extensions_map)
 
@@ -77,13 +77,13 @@ class FileOrganizer:
     def organize(self, root_dir: Path) -> None:
         """Organize the contents of `root_dir`."""
 
-        self._create_subdirectories(root_dir)
+        self._create_destination_dirs(root_dir)
 
         # `move_file()` will move a file’s existing sidecar file alongside it, so defer processing XMP files to the end.
         xmp_files: list[Path] = []
 
         for file in root_dir.iterdir():
-            if file.name in self.destinations or file.name == ".DS_Store":
+            if file.name in self.destination_dirs or file.name == ".DS_Store":
                 continue
 
             elif file.is_dir():
@@ -124,8 +124,8 @@ class FileOrganizer:
 
     # Private methods
 
-    def _create_subdirectories(self, root_dir: Path) -> None:
-        """Create the destinations listed in the config file."""
+    def _create_destination_dirs(self, root_dir: Path) -> None:
+        """Create the destination_dirs listed in the config file."""
 
-        for name in self.destinations:
+        for name in self.destination_dirs:
             (root_dir / name).mkdir(parents=True, exist_ok=True)

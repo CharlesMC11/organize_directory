@@ -6,7 +6,7 @@ import pytest
 from file_organizer import FileOrganizer
 
 TEST_CONFIG = """
-[destinations]
+[destination_dirs]
 archives = Archives
 images = Images
 images_raw = Images/Raw
@@ -65,7 +65,7 @@ def test_misc_fallback(organizer, tmp_path):
 
 
 def test_sidecar(organizer, tmp_path):
-    organizer._create_subdirectories(tmp_path)
+    organizer._create_destination_dirs(tmp_path)
 
     img = tmp_path / "jpeg.jpeg"
     img.write_text("Some image")
