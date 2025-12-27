@@ -1,5 +1,5 @@
 import shutil
-from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 
@@ -45,7 +45,9 @@ def test_extensionless(organizer, tmp_path):
     bash.write_text("#!/usr/bin/env -S bash\n\necho 'Hello, World!'\n")
     bash_target = organizer.get_extensionless_target(bash)
 
-    zipfile = Path(__file__).with_name("test_zipfile.zip")
+    zipfile = tmp_path / "zip"
+    with ZipFile(zipfile, mode="x") as f:
+        f.write(python)
     zipfile_target = organizer.get_extensionless_target(zipfile)
 
     assert python_target == organizer.targets["py"]
