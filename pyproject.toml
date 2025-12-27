@@ -1,0 +1,12 @@
+[project]
+name = "file-organizer"
+version = "1.0.0"
+description = "A script originally intended to organize my Downloads folder."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
