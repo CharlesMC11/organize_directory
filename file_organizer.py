@@ -1,10 +1,14 @@
 __author__ = "Charles Mesa Cayobit"
 
+import logging
 import re
 import shutil
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class FileOrganizer:
@@ -52,6 +56,7 @@ class FileOrganizer:
                 header = f.read(256)
 
         except (IOError, PermissionError) as e:
+            logger.error(f"Could not open file {file.name}: {e}")
 
         else:
             for pattern, key in self._header_patterns:
@@ -102,6 +107,8 @@ class FileOrganizer:
         sidecar_file = file.with_suffix(".xmp")
         if sidecar_file.exists():
             shutil.move(sidecar_file, target_dir)
+        else:
+            logger.debug(f"{sidecar_file} does not exist, skipping")
 
     def _create_subdirectories(self, root_dir: Path) -> None:
 
