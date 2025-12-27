@@ -67,48 +67,35 @@ class FileOrganizer:
 
 ORGANIZER = FileOrganizer(TARGETS_FILE)
 
-# `move_image()` will move an image's existing sidecar file alongside the
-# image, so defer processing XMP files to the end.
-xmp_files: list[Path] = []
-
-
-def move(file: Path, root_dir: Path) -> None:
-    """Move the file
-
-    :param file: The file to move
-    :param root_dir: The root directory to move to
-    """
-
-    if file.name in ORGANIZER.directories or file.name == ".DS_Store":
-        return
-
-    elif file.is_dir():
-        FileOrganizer.move_file(file, root_dir / ORGANIZER.MISC_DIR)
-        return
-
-    file_ext = file.suffix
-    if not file_ext:
-        target_dir = ORGANIZER.get_extensionless_target(file)
-        FileOrganizer.move_file(file, root_dir / target_dir)
-        return
-
-    file_ext = file_ext.lstrip(".").lower()
-    if file_ext == "xmp":
-        global xmp_files
-        xmp_files.append(file)
-        return
-
-    target_dir = ORGANIZER.targets.get(file_ext, ORGANIZER.MISC_DIR)
-
-    FileOrganizer.move_file(file, root_dir / target_dir)
-
 
 def main(root_dir: Path) -> None:
     for directory in ORGANIZER.directories:
         (root_dir / directory).mkdir(parents=True, exist_ok=True)
 
+    # `move_file()` will move a file’s existing sidecar file alongside it, so defer processing XMP files to the end.
+    xmp_files: list[Path] = []
+
     for file in root_dir.iterdir():
-        move(file, root_dir)
+        if file.name in ORGANIZER.directories or file.name == ".DS_Store":
+            continue
+
+        elif file.is_dir():
+            FileOrganizer.move_file(file, root_dir / ORGANIZER.MISC_DIR)
+            continue
+
+        file_ext = file.suffix
+        if not file_ext:
+            target_dir = ORGANIZER.get_extensionless_target(file)
+            FileOrganizer.move_file(file, root_dir / target_dir)
+            continue
+
+        file_ext = file_ext.lstrip(".").lower()
+        if file_ext == "xmp":
+            xmp_files.append(file)
+            continue
+
+        target_dir = ORGANIZER.targets.get(file_ext, ORGANIZER.MISC_DIR)
+        FileOrganizer.move_file(file, root_dir / target_dir)
 
     for xmp_file in xmp_files:
         if xmp_file.exists():
