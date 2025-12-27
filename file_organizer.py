@@ -12,7 +12,13 @@ logger.setLevel(logging.DEBUG)
 
 
 class FileOrganizer:
+    """Class for organizing files and directories."""
+
+    # Class attributes
+
     MISC_DIR = "Misc"
+
+    # Magic methods
 
     def __init__(self, targets_file: Path) -> None:
         parser = ConfigParser()
@@ -35,6 +41,8 @@ class FileOrganizer:
         self._header_patterns = header_patterns
         self._targets = targets
 
+    # Properties
+
     @property
     def directories(self) -> frozenset[str]:
         return frozenset(self._directories)
@@ -46,6 +54,8 @@ class FileOrganizer:
     @property
     def targets(self) -> MappingProxyType[str, str]:
         return MappingProxyType(self._targets)
+
+    # Public methods
 
     def get_extensionless_target(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
@@ -98,6 +108,8 @@ class FileOrganizer:
             if xmp_file.exists():
                 self.move_file(xmp_file, root_dir / self.MISC_DIR)
 
+    # Public static methods
+
     @staticmethod
     def move_file(file: Path, target_dir: Path) -> None:
         """Move `file` and, if it exists, its sidecar file into `target_dir`."""
@@ -109,6 +121,8 @@ class FileOrganizer:
             shutil.move(sidecar_file, target_dir)
         else:
             logger.debug(f"{sidecar_file} does not exist, skipping")
+
+    # Private methods
 
     def _create_subdirectories(self, root_dir: Path) -> None:
 
