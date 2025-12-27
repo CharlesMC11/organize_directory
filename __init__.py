@@ -109,7 +109,5 @@ def main(root_dir: Path) -> None:
         move(file, root_dir)
 
     for xmp_file in xmp_files:
-        try:
+        if xmp_file.exists():
             FileOrganizer.move_file(xmp_file, root_dir / ORGANIZER.MISC_DIR)
-        except FileNotFoundError:
-            pass  # Do nothing if the image sidecar file had already been moved.
