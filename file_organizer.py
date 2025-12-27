@@ -87,7 +87,7 @@ class FileOrganizer:
                 continue
 
             elif file.is_dir():
-                self.move_file(file, root_dir / self.MISC_DIR)
+                shutil.move(file, root_dir / self.MISC_DIR)
                 continue
 
             file_ext = file.suffix
@@ -106,7 +106,7 @@ class FileOrganizer:
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
-                self.move_file(xmp_file, root_dir / self.MISC_DIR)
+                shutil.move(xmp_file, root_dir / self.MISC_DIR)
 
     # Public static methods
 
