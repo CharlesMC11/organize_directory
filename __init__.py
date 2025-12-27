@@ -102,7 +102,7 @@ def move(file: Path, root_dir: Path) -> None:
         move_extensionless(file, root_dir)
         return
 
-    file_ext = file_ext[1:].lower()
+    file_ext = file_ext.lstrip(".").lower()
     if file_ext == "xmp":
         global xmp_files
         xmp_files.append(file)
