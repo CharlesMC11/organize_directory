@@ -5,8 +5,6 @@ import shutil
 from configparser import ConfigParser
 from pathlib import Path
 
-TARGETS_FILE = Path(__file__).with_name("targets.cfg")
-
 
 class FileOrganizer:
     HEADERS = ((re.compile(rb"#!.*?python"), "py"), (re.compile(rb"#!.*?sh"), "sh"))
@@ -64,39 +62,35 @@ class FileOrganizer:
         if sidecar_file.exists():
             shutil.move(sidecar_file, target_dir)
 
+    def main(self, root_dir: Path) -> None:
+        for directory in self.directories:
+            (root_dir / directory).mkdir(parents=True, exist_ok=True)
 
-ORGANIZER = FileOrganizer(TARGETS_FILE)
+        # `move_file()` will move a file’s existing sidecar file alongside it, so defer processing XMP files to the end.
+        xmp_files: list[Path] = []
 
+        for file in root_dir.iterdir():
+            if file.name in self.directories or file.name == ".DS_Store":
+                continue
 
-def main(root_dir: Path) -> None:
-    for directory in ORGANIZER.directories:
-        (root_dir / directory).mkdir(parents=True, exist_ok=True)
+            elif file.is_dir():
+                self.move_file(file, root_dir / self.MISC_DIR)
+                continue
 
-    # `move_file()` will move a file’s existing sidecar file alongside it, so defer processing XMP files to the end.
-    xmp_files: list[Path] = []
+            file_ext = file.suffix
+            if not file_ext:
+                target_dir = self.get_extensionless_target(file)
+                self.move_file(file, root_dir / target_dir)
+                continue
 
-    for file in root_dir.iterdir():
-        if file.name in ORGANIZER.directories or file.name == ".DS_Store":
-            continue
+            file_ext = file_ext.lstrip(".").lower()
+            if file_ext == "xmp":
+                xmp_files.append(file)
+                continue
 
-        elif file.is_dir():
-            FileOrganizer.move_file(file, root_dir / ORGANIZER.MISC_DIR)
-            continue
+            target_dir = self.targets.get(file_ext, self.MISC_DIR)
+            self.move_file(file, root_dir / target_dir)
 
-        file_ext = file.suffix
-        if not file_ext:
-            target_dir = ORGANIZER.get_extensionless_target(file)
-            FileOrganizer.move_file(file, root_dir / target_dir)
-            continue
-
-        file_ext = file_ext.lstrip(".").lower()
-        if file_ext == "xmp":
-            xmp_files.append(file)
-            continue
-
-        target_dir = ORGANIZER.targets.get(file_ext, ORGANIZER.MISC_DIR)
-        FileOrganizer.move_file(file, root_dir / target_dir)
-
-    for xmp_file in xmp_files:
-        if xmp_file.exists():
-            FileOrganizer.move_file(xmp_file, root_dir / ORGANIZER.MISC_DIR)
+        for xmp_file in xmp_files:
+            if xmp_file.exists():
+                self.move_file(xmp_file, root_dir / self.MISC_DIR)
