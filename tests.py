@@ -14,7 +14,7 @@ programming = Programming
 python = Programming/Python
 shell = Programming/Shell
 
-[identity_patterns]
+[signature_patterns]
 py = #!/.+?python
 sh = #!/.+?sh
 zip = PK\x03\x04

@@ -30,9 +30,9 @@ class FileOrganizer:
         destination_dirs = set(parser["destination_dirs"].values())
         destination_dirs.add(cls.MISC_DIR)
 
-        identity_patterns = [
+        signature_patterns = [
             (re.compile(pattern.encode()), key)
-            for key, pattern in parser["identity_patterns"].items()
+            for key, pattern in parser["signature_patterns"].items()
         ]
 
         extensions_map = {
@@ -40,18 +40,18 @@ class FileOrganizer:
             for file_extension, target_path in parser["extensions_map"].items()
         }
 
-        return cls(destination_dirs, identity_patterns, extensions_map)
+        return cls(destination_dirs, signature_patterns, extensions_map)
 
     # Magic methods
 
     def __init__(
             self,
             destination_dirs: Iterable[str],
-            identity_patterns: Sequence[tuple[re.Pattern[bytes], str]],
+            signature_patterns: Sequence[tuple[re.Pattern[bytes], str]],
             extensions_map: Mapping[str, str],
     ) -> None:
         self.destination_dirs: Final = frozenset(destination_dirs)
-        self.identity_patterns: Final = tuple(identity_patterns)
+        self.signature_patterns: Final = tuple(signature_patterns)
         self.extensions_map: Final = MappingProxyType(extensions_map)
 
     # Public methods
@@ -68,7 +68,7 @@ class FileOrganizer:
             logger.error(f"Could not open file {file.name}: {e}")
 
         else:
-            for pattern, key in self.identity_patterns:
+            for pattern, key in self.signature_patterns:
                 if pattern.match(header):
                     return self.extensions_map.get(key, self.MISC_DIR)
 
@@ -94,6 +94,7 @@ class FileOrganizer:
             if not file_ext:
                 target_dir = self.get_extensionless_target(file)
                 self.move_file(file, root_dir / target_dir)
+                target_dir = self.get_extensionless_dst(file)
                 continue
 
             file_ext = file_ext.lstrip(".").lower()
