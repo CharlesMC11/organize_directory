@@ -24,6 +24,11 @@ class FileOrganizer:
 
     @classmethod
     def from_ini(cls, file: Path) -> Self:
+        """Use mappings from an ini file.
+
+        Expected headers are `destination_dirs`, `signature_patterns`, and `extensions_map`.
+        """
+
         parser = ConfigParser()
         parser.read(file)
 
