@@ -76,6 +76,7 @@ class FileOrganizer:
         return target_dir
 
     def organize(self, root_dir: Path) -> None:
+        """Organize the contents of `root_dir`."""
 
         self._create_subdirectories(root_dir)
 
