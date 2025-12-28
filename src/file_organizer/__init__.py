@@ -37,19 +37,19 @@ class FileOrganizer:
         destination_dirs = set(parser["destination_dirs"].values())
         destination_dirs.add(cls.MISC_DIR)
 
-        signature_patterns = (
+        re_pattern_groups = (
             f"(?P<{key}>{pattern})"
             for key, pattern in parser["signature_patterns"].items()
         )
-        signature_patterns = "|".join(signature_patterns)
-        signature_patterns = re.compile(signature_patterns.encode("utf-8"))
+        re_combined_pattern = "|".join(re_pattern_groups)
+        re_compiled_pattern = re.compile(re_combined_pattern.encode("utf-8"))
 
         extensions_map = {
             file_extension: parser["destination_dirs"][target_path]
             for file_extension, target_path in parser["extensions_map"].items()
         }
 
-        return cls(destination_dirs, signature_patterns, extensions_map)
+        return cls(destination_dirs, re_compiled_pattern, extensions_map)
 
     # Magic methods
 
