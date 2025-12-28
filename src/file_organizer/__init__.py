@@ -6,7 +6,7 @@ import logging
 import os
 import re
 import shutil
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
@@ -37,10 +37,12 @@ class FileOrganizer:
         destination_dirs = set(parser["destination_dirs"].values())
         destination_dirs.add(cls.MISC_DIR)
 
-        signature_patterns = [
-            (re.compile(pattern.encode()), key)
+        signature_patterns = (
+            f"(?P<{key}>{pattern})"
             for key, pattern in parser["signature_patterns"].items()
-        ]
+        )
+        signature_patterns = "|".join(signature_patterns)
+        signature_patterns = re.compile(signature_patterns.encode("utf-8"))
 
         extensions_map = {
             file_extension: parser["destination_dirs"][target_path]
@@ -54,12 +56,12 @@ class FileOrganizer:
     def __init__(
             self,
             destination_dirs: Iterable[str],
-            signature_patterns: Sequence[tuple[re.Pattern[bytes], str]],
+            signature_patterns: re.Pattern[bytes],
             extensions_map: Mapping[str, str],
     ) -> None:
         """Load the organizer’s configurations."""
         self.destination_dirs: Final = frozenset(destination_dirs)
-        self.signature_patterns: Final = tuple(signature_patterns)
+        self.signature_patterns: Final = signature_patterns
         self.extensions_map: Final = MappingProxyType(extensions_map)
 
     # Public methods
@@ -75,8 +77,10 @@ class FileOrganizer:
             logger.error(f"Could not open file {file.name}: {e}")
 
         else:
-            for pattern, key in self.signature_patterns:
-                if pattern.match(header):
+            match = self.signature_patterns.match(header)
+            if match is not None:
+                key = match.lastgroup
+                if key is not None:
                     return self.extensions_map.get(key, self.MISC_DIR)
 
         return destination_dir
