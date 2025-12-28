@@ -89,8 +89,7 @@ class FileOrganizer:
         """Organize the contents of `root`."""
         self._create_destination_dirs(root)
 
-        # `move_file()` will move a src’s existing sidecar src alongside it, so
-        # defer processing XMP files to the end.
+        # `move_file()` will move a file’s existing sidecar alongside it, so defer processing XMP files to the end.
         xmp_files: list[Path] = []
 
         with os.scandir(root) as it:
