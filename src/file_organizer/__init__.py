@@ -69,7 +69,7 @@ class FileOrganizer:
         destination_dir = self.MISC_DIR
         try:
             with file.open("rb") as f:
-                header = f.read(256)
+                header = f.read(32)
 
         except (OSError, PermissionError) as e:
             logger.error(f"Could not open file {file.name}: {e}")
