@@ -93,22 +93,24 @@ class FileOrganizer:
         xmp_files: list[Path] = []
 
         with os.scandir(root) as it:
-            for file in it:
-                if file.name in self.destination_dirs:
+            for entry in it:
+                if entry.name in self.destination_dirs:
                     continue
 
-                elif file.name == ".DS_Store":
+                elif entry.name == ".DS_Store":
                     continue
 
-                elif file.is_dir():
-                    shutil.move(file, root / self.MISC_DIR)
+                elif entry.is_dir():
+                    shutil.move(entry, root / self.MISC_DIR / entry.name)
                     continue
 
-                file = Path(file)
+                file = Path(entry)
                 file_ext = file.suffix.lstrip(".").lower()
                 if not file_ext:
                     destination_dir = self.get_extensionless_dst(file)
-                    self.move_file_and_sidecar(file, root / destination_dir)
+                    self.move_file_and_sidecar(
+                        file, root / destination_dir / file.name
+                    )
                     continue
 
                 elif file_ext == "xmp":
@@ -119,11 +121,13 @@ class FileOrganizer:
                     file_ext, self.MISC_DIR
                 )
 
-                self.move_file_and_sidecar(file, root / destination_dir)
+                self.move_file_and_sidecar(
+                    file, root / destination_dir / file.name
+                )
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
-                shutil.move(xmp_file, root / self.MISC_DIR)
+                shutil.move(xmp_file, root / self.MISC_DIR / xmp_file.name)
 
     # Public static methods
 
@@ -137,7 +141,7 @@ class FileOrganizer:
 
         sidecar_file = src.with_suffix(".xmp")
         if sidecar_file.exists():
-            shutil.move(sidecar_file, dst)
+            shutil.move(sidecar_file, dst.with_suffix(".xmp"))
         else:
             logger.debug(f"{sidecar_file} does not exist, skipping")
 
