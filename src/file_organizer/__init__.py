@@ -3,6 +3,7 @@
 __author__ = "Charles Mesa Cayobit"
 
 import logging
+import os
 import re
 import shutil
 from collections.abc import Iterable, Mapping, Sequence
@@ -88,27 +89,34 @@ class FileOrganizer:
         # defer processing XMP files to the end.
         xmp_files: list[Path] = []
 
-        for file in root.iterdir():
-            if file.name in self.destination_dirs or file.name == ".DS_Store":
-                continue
+        with os.scandir(root) as it:
+            for file in it:
+                if file.name in self.destination_dirs:
+                    continue
 
-            elif file.is_dir():
-                shutil.move(file, root / self.MISC_DIR)
-                continue
+                elif file.name == ".DS_Store":
+                    continue
 
-            file_ext = file.suffix
-            if not file_ext:
-                destination_dir = self.get_extensionless_dst(file)
+                elif file.is_dir():
+                    shutil.move(file, root / self.MISC_DIR)
+                    continue
+
+                file = Path(file)
+                file_ext = file.suffix.lstrip(".").lower()
+                if not file_ext:
+                    destination_dir = self.get_extensionless_dst(file)
+                    self.move_file_and_sidecar(file, root / destination_dir)
+                    continue
+
+                elif file_ext == "xmp":
+                    xmp_files.append(file)
+                    continue
+
+                destination_dir = self.extensions_map.get(
+                    file_ext, self.MISC_DIR
+                )
+
                 self.move_file_and_sidecar(file, root / destination_dir)
-                continue
-
-            file_ext = file_ext.lstrip(".").lower()
-            if file_ext == "xmp":
-                xmp_files.append(file)
-                continue
-
-            destination_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
-            self.move_file_and_sidecar(file, root / destination_dir)
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
