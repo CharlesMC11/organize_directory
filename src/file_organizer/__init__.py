@@ -135,7 +135,7 @@ class FileOrganizer:
     def move_file_and_sidecar(src: Path, dst: Path) -> None:
         """Move a file and, if it exists, its sidecar from `src` into `dst`."""
 
-        dst = FileOrganizer._get_unique_stem(dst)
+        dst = FileOrganizer._get_unique_path(dst)
 
         shutil.move(src, dst)
 
@@ -153,10 +153,14 @@ class FileOrganizer:
             (root / dst).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
-    def _get_unique_stem(path: Path):
-        unique_counter = 1
+    def _get_unique_path(path: Path):
+        if not path.exists():
+            return path
+
+        stem = path.stem
+        counter = 1
         while path.exists():
-            path = path.with_stem(f"{path.stem}_{unique_counter}")
-            unique_counter += 1
+            path = path.with_stem(f"{stem}_{counter}")
+            counter += 1
 
         return path
