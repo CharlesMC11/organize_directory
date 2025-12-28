@@ -101,16 +101,20 @@ class FileOrganizer:
                     continue
 
                 elif entry.is_dir():
-                    shutil.move(entry, root / self.MISC_DIR / entry.name)
+                    dpath = self._get_unique_destination_path(
+                        root / self.MISC_DIR / entry.name
+                    )
+                    shutil.move(entry, dpath)
                     continue
 
                 file = Path(entry)
                 file_ext = file.suffix.lstrip(".").lower()
                 if not file_ext:
                     destination_dir = self.get_extensionless_dst(file)
-                    self.move_file_and_sidecar(
-                        file, root / destination_dir / file.name
+                    destination_path = self._get_unique_destination_path(
+                        root / destination_dir / file.name
                     )
+                    self.move_file_and_sidecar(file, destination_path)
                     continue
 
                 elif file_ext == "xmp":
@@ -120,10 +124,10 @@ class FileOrganizer:
                 destination_dir = self.extensions_map.get(
                     file_ext, self.MISC_DIR
                 )
-
-                self.move_file_and_sidecar(
-                    file, root / destination_dir / file.name
+                destination_path = self._get_unique_destination_path(
+                    root / destination_dir / file.name
                 )
+                self.move_file_and_sidecar(file, destination_path)
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
@@ -133,9 +137,11 @@ class FileOrganizer:
 
     @staticmethod
     def move_file_and_sidecar(src: Path, dst: Path) -> None:
-        """Move a file and, if it exists, its sidecar from `src` into `dst`."""
+        """Move a file and, if it exists, its sidecar from `src` into `dst`.
 
-        dst = FileOrganizer._get_unique_path(dst)
+        :param src: the source file’s full path
+        :param dst: the destination’s full path
+        """
 
         shutil.move(src, dst)
 
@@ -154,7 +160,11 @@ class FileOrganizer:
             (root / dst).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
-    def _get_unique_path(path: Path):
+    def _get_unique_destination_path(path: Path):
+        """Append a counter to the path stem if it’s not a unique path.
+
+        :param path: a destination path a file will be saved to"""
+
         if not path.exists():
             return path
 

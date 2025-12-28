@@ -125,6 +125,6 @@ def test__get_unique_name(organizer, tmp_path):
     dst = dst_dir / "file.txt"
     dst.write_text("Hello, World!")
 
-    new_path = organizer._get_unique_path(dst)
+    new_path = organizer._get_unique_destination_path(dst)
 
     assert new_path == dst.with_stem(dst.stem + "_1")
