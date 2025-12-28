@@ -95,8 +95,8 @@ def test_sidecar(organizer, tmp_path):
     assert img_target == tmp_path / "Images"
     assert raw_target == tmp_path / "Images/Raw"
 
-    organizer.move_file_and_sidecar(img, img_target)
-    organizer.move_file_and_sidecar(raw, raw_target)
+    organizer.move_file_and_sidecar(img, img_target / img.name)
+    organizer.move_file_and_sidecar(raw, raw_target / raw.name)
 
     assert (img_target / "jpeg.jpeg").exists()
     assert (img_target / "jpeg.xmp").exists()
@@ -116,3 +116,15 @@ def test_sidecar(organizer, tmp_path):
 
         else:
             assert (xmp_target / "xmp.xmp").exists()
+
+
+def test__get_unique_name(organizer, tmp_path):
+    dst_dir = tmp_path / "dst"
+    dst_dir.mkdir()
+
+    dst = dst_dir / "file.txt"
+    dst.write_text("Hello, World!")
+
+    new_path = organizer._get_unique_stem(dst)
+
+    assert new_path == dst.with_stem(dst.stem + "_1")

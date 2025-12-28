@@ -130,6 +130,9 @@ class FileOrganizer:
     @staticmethod
     def move_file_and_sidecar(src: Path, dst: Path) -> None:
         """Move a file and, if it exists, its sidecar from `src` into `dst`."""
+
+        dst = FileOrganizer._get_unique_stem(dst)
+
         shutil.move(src, dst)
 
         sidecar_file = src.with_suffix(".xmp")
@@ -144,3 +147,12 @@ class FileOrganizer:
         """Create the `destination_dirs` listed in the config file."""
         for dst in self.destination_dirs:
             (root / dst).mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def _get_unique_stem(path: Path):
+        unique_counter = 1
+        while path.exists():
+            path = path.with_stem(f"{path.stem}_{unique_counter}")
+            unique_counter += 1
+
+        return path
