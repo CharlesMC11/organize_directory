@@ -45,7 +45,7 @@ class FileOrganizer:
         re_compiled_pattern = re.compile(re_combined_pattern.encode("utf-8"))
 
         extensions_map = {
-            file_extension: parser["destination_dirs"][target_path]
+            file_extension.lower(): parser["destination_dirs"][target_path]
             for file_extension, target_path in parser["extensions_map"].items()
         }
 
