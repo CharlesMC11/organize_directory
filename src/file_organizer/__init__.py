@@ -139,11 +139,12 @@ class FileOrganizer:
 
         shutil.move(src, dst)
 
-        sidecar_file = src.with_suffix(".xmp")
-        if sidecar_file.exists():
-            shutil.move(sidecar_file, dst.with_suffix(".xmp"))
+        src_sidecar = src.with_suffix(".xmp")
+        if src_sidecar.exists():
+            dst_sidecar = dst.with_suffix(".xmp")
+            shutil.move(src_sidecar, dst_sidecar)
         else:
-            logger.debug(f"{sidecar_file} does not exist, skipping")
+            logger.debug(f"{src_sidecar} does not exist, skipping")
 
     # Private methods
 
