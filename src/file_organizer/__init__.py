@@ -93,46 +93,53 @@ class FileOrganizer:
         # `move_file()` will move a file’s existing sidecar alongside it, so defer processing XMP files to the end.
         xmp_files: list[Path] = []
 
+        def process(entry: os.DirEntry) -> None:
+            if entry.is_dir():
+                dst_path = self._get_unique_destination_path(
+                    root / self.MISC_DIR / entry.name
+                )
+                shutil.move(entry, dst_path)
+                return
+
+            file = Path(entry)
+            file_ext = file.suffix.lstrip(".").lower()
+            if not file_ext:
+                dst_dir = self.get_extensionless_dst(file)
+                dst_path = self._get_unique_destination_path(
+                    root / dst_dir / file.name
+                )
+                self.move_file_and_sidecar(file, dst_path)
+                return
+
+            elif file_ext == "xmp":
+                nonlocal xmp_files
+                xmp_files.append(file)
+                return
+
+            dst_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
+            dst_path = self._get_unique_destination_path(
+                root / dst_dir / file.name
+            )
+            self.move_file_and_sidecar(file, dst_path)
+
         with os.scandir(root) as it:
             for entry in it:
                 if entry.name in self.destination_dirs:
                     continue
-
                 elif entry.name == ".DS_Store":
                     continue
 
-                elif entry.is_dir():
-                    dpath = self._get_unique_destination_path(
-                        root / self.MISC_DIR / entry.name
-                    )
-                    shutil.move(entry, dpath)
-                    continue
-
-                file = Path(entry)
-                file_ext = file.suffix.lstrip(".").lower()
-                if not file_ext:
-                    destination_dir = self.get_extensionless_dst(file)
-                    destination_path = self._get_unique_destination_path(
-                        root / destination_dir / file.name
-                    )
-                    self.move_file_and_sidecar(file, destination_path)
-                    continue
-
-                elif file_ext == "xmp":
-                    xmp_files.append(file)
-                    continue
-
-                destination_dir = self.extensions_map.get(
-                    file_ext, self.MISC_DIR
-                )
-                destination_path = self._get_unique_destination_path(
-                    root / destination_dir / file.name
-                )
-                self.move_file_and_sidecar(file, destination_path)
+                try:
+                    process(entry)
+                except (OSError, PermissionError) as e:
+                    logger.error(f"Could not move {entry.name}: {e}")
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
-                shutil.move(xmp_file, root / self.MISC_DIR / xmp_file.name)
+                try:
+                    shutil.move(xmp_file, root / self.MISC_DIR / xmp_file.name)
+                except (OSError, PermissionError) as e:
+                    logger.error(f"Could not move {xmp_file.name}: {e}")
 
     # Public static methods
 
