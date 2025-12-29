@@ -104,6 +104,7 @@ def test_from_json(tmp_path):
     assert b"#!/.+?python" in organizer.signature_patterns.pattern
     assert "Programming/Python" in organizer.extensions_map["py"]
 
+
 @pytest.fixture
 def organizer(tmp_path):
     conf = tmp_path / "conf.cfg"

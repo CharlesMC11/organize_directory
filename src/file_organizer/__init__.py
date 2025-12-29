@@ -145,53 +145,48 @@ class FileOrganizer:
         # `move_file()` will move a file’s existing sidecar alongside it, so defer processing XMP files to the end.
         xmp_files: list[Path] = []
 
-        def process(entry: os.DirEntry) -> None:
-            if entry.is_dir():
-                dst_path = self._get_unique_destination_path(
-                    root / self.MISC_DIR / entry.name
-                )
-                shutil.move(entry, dst_path)
-                return
-
-            file = Path(entry)
-            file_ext = file.suffix.lstrip(".").lower()
-            if not file_ext:
-                dst_dir = self.get_extensionless_dst(file)
-                dst_path = self._get_unique_destination_path(
-                    root / dst_dir / file.name
-                )
-                self.move_file_and_sidecar(file, dst_path)
-                return
-
-            elif file_ext == "xmp":
-                nonlocal xmp_files
-                xmp_files.append(file)
-                return
-
-            dst_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
-            dst_path = self._get_unique_destination_path(
-                root / dst_dir / file.name
-            )
-            self.move_file_and_sidecar(file, dst_path)
-
         with os.scandir(root) as it:
             for entry in it:
                 if entry.name in self.destination_dirs:
                     continue
+
                 elif entry.name == ".DS_Store":
                     continue
 
-                try:
-                    process(entry)
-                except (OSError, PermissionError) as e:
-                    logger.error(f"Could not move {entry.name}: {e}")
+                if entry.is_dir():
+                    dst_path = self._get_unique_destination_path(
+                        root / self.MISC_DIR / entry.name
+                    )
+
+                    self._safely_move(entry, dst_path)
+                    continue
+
+                file = Path(entry)
+                file_ext = file.suffix.lstrip(".").lower()
+                if not file_ext:
+                    dst_dir = self.get_extensionless_dst(file)
+                    dst_path = self._get_unique_destination_path(
+                        root / dst_dir / file.name
+                    )
+                    self.move_file_and_sidecar(file, dst_path)
+                    continue
+
+                elif file_ext == "xmp":
+                    xmp_files.append(file)
+                    continue
+
+                dst_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
+                dst_path = self._get_unique_destination_path(
+                    root / dst_dir / file.name
+                )
+                self.move_file_and_sidecar(file, dst_path)
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
-                try:
-                    shutil.move(xmp_file, root / self.MISC_DIR / xmp_file.name)
-                except (OSError, PermissionError) as e:
-                    logger.error(f"Could not move {xmp_file.name}: {e}")
+                dst_path = self._get_unique_destination_path(
+                    root / self.MISC_DIR / xmp_file.name
+                )
+                self._safely_move(xmp_file, dst_path)
 
     # Public static methods
 
@@ -203,14 +198,15 @@ class FileOrganizer:
         :param dst: the destination’s full path
         """
 
-        shutil.move(src, dst)
+        FileOrganizer._safely_move(src, dst)
 
         src_sidecar = src.with_suffix(".xmp")
-        if src_sidecar.exists():
-            dst_sidecar = dst.with_suffix(".xmp")
-            shutil.move(src_sidecar, dst_sidecar)
-        else:
+        if not src_sidecar.exists():
             logger.debug(f"{src_sidecar} does not exist, skipping")
+            return
+
+        dst_sidecar = dst.with_suffix(".xmp")
+        FileOrganizer._safely_move(src_sidecar, dst_sidecar)
 
     # Private methods
 
@@ -242,3 +238,10 @@ class FileOrganizer:
             counter += 1
 
         return path
+
+    @staticmethod
+    def _safely_move(src: Path, dst: Path) -> None:
+        try:
+            shutil.move(src, dst)
+        except OSError as e:
+            logger.error(f"Could not move {src.name}: {e}")
