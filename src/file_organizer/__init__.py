@@ -251,3 +251,6 @@ class FileOrganizer:
             shutil.move(src, FileOrganizer._get_unique_destination_path(dst))
         except OSError as e:
             logger.error(f"Could not move {src.name}: {e}")
+
+            return False
+        return True
