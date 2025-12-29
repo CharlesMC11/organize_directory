@@ -36,19 +36,25 @@ class FileOrganizer:
         parser = ConfigParser()
         parser.read(file)
 
-        destination_dirs = set(parser["destination_dirs"].values())
+        try:
+            destination_dirs = set(parser["destination_dirs"].values())
 
-        re_pattern_groups = (
-            f"(?P<{key}>{pattern})"
-            for key, pattern in parser["signature_patterns"].items()
-        )
+            re_pattern_groups = (
+                f"(?P<{key}>{pattern})"
+                for key, pattern in parser["signature_patterns"].items()
+            )
+
+            extensions_map = {
+                ext: parser["destination_dirs"][dst_path]
+                for ext, dst_path in parser["extensions_map"].items()
+            }
+        except KeyError:
+            raise ValueError(
+                "Config file does not have all the appropriate headers"
+            )
+
         re_combined_pattern = "|".join(re_pattern_groups)
         re_compiled_pattern = re.compile(re_combined_pattern.encode("utf-8"))
-
-        extensions_map = {
-            file_extension: parser["destination_dirs"][destination_path]
-            for file_extension, destination_path in parser["extensions_map"].items()
-        }
 
         return cls(destination_dirs, re_compiled_pattern, extensions_map)
 
