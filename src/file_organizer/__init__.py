@@ -30,7 +30,7 @@ class FileOrganizer:
         """Use mappings from an ini file.
 
         :param file: path to an ini file
-        Expected headers are `destination_dirs`, `signature_patterns`, and `extensions_map`.
+        Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
         if not file.is_file():
