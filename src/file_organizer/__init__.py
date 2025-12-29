@@ -6,7 +6,7 @@ import logging
 import os
 import re
 import shutil
-from collections.abc import MutableMapping, MutableSet
+from collections.abc import Mapping, MutableSet
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
@@ -52,35 +52,37 @@ class FileOrganizer:
 
         destination_dirs = set(parser["destination_dirs"].values())
 
-        re_pattern_groups = (
-            f"(?P<{key}>{pattern})"
-            for key, pattern in parser["signature_patterns"].items()
-        )
-        re_combined_pattern = "|".join(re_pattern_groups)
-        re_compiled_pattern = re.compile(re_combined_pattern.encode("utf-8"))
-
         extensions_map = {
             ext: parser["destination_dirs"][key]
             for ext, key in parser["extensions_map"].items()
         }
 
-        return cls(destination_dirs, re_compiled_pattern, extensions_map)
+        return cls(
+            destination_dirs, parser["signature_patterns"], extensions_map
+        )
 
     # Magic methods
 
     def __init__(
             self,
             destination_dirs: MutableSet[str],
-            signature_patterns: re.Pattern[bytes],
-            extensions_map: MutableMapping[str, str],
+            signature_patterns: Mapping[str, str],
+            extensions_map: Mapping[str, str],
     ) -> None:
         destination_dirs.add(self.MISC_DIR)
+
+        combined_pattern = "|".join(
+            f"(?P<{key.lower()}>{pattern})"
+            for key, pattern in signature_patterns.items()
+        )
+        compiled_pattern = re.compile(combined_pattern.encode("utf-8"))
+
         extensions_map = {
             ext.lower(): path for ext, path in extensions_map.items()
         }
 
         self.destination_dirs: Final = frozenset(destination_dirs)
-        self.signature_patterns: Final = signature_patterns
+        self.signature_patterns: Final = compiled_pattern
         self.extensions_map: Final = MappingProxyType(extensions_map)
 
     # Public methods
