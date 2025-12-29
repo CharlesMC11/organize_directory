@@ -137,8 +137,7 @@ def test_extensionless(organizer, tmp_path):
     assert unknown_target == organizer.MISC_DIR
 
 
-
-def test_sidecar(organizer, tmp_path):
+def test_move_file_and_sidecar(organizer, tmp_path):
     organizer._create_destination_dirs(tmp_path)
 
     img = tmp_path / "jpeg.jpeg"
@@ -192,7 +191,7 @@ def test_sidecar(organizer, tmp_path):
             assert (xmp_target / "xmp.xmp").exists()
 
 
-def test__get_unique_name(organizer, tmp_path):
+def test__get_unique_destination_path(organizer, tmp_path):
     dst_dir = tmp_path / "dst"
     dst_dir.mkdir()
 
