@@ -6,7 +6,7 @@ import logging
 import os
 import re
 import shutil
-from collections.abc import Mapping, MutableSet
+from collections.abc import MutableMapping, MutableSet
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
@@ -46,8 +46,8 @@ class FileOrganizer:
         re_compiled_pattern = re.compile(re_combined_pattern.encode("utf-8"))
 
         extensions_map = {
-            file_extension.lower(): parser["destination_dirs"][target_path]
-            for file_extension, target_path in parser["extensions_map"].items()
+            file_extension: parser["destination_dirs"][destination_path]
+            for file_extension, destination_path in parser["extensions_map"].items()
         }
 
         return cls(destination_dirs, re_compiled_pattern, extensions_map)
@@ -58,9 +58,12 @@ class FileOrganizer:
             self,
             destination_dirs: MutableSet[str],
             signature_patterns: re.Pattern[bytes],
-            extensions_map: Mapping[str, str],
+            extensions_map: MutableMapping[str, str],
     ) -> None:
         destination_dirs.add(self.MISC_DIR)
+        extensions_map = {
+            ext.lower(): path for ext, path in extensions_map.items()
+        }
 
         self.destination_dirs: Final = frozenset(destination_dirs)
         self.signature_patterns: Final = signature_patterns
