@@ -27,6 +27,30 @@ sh = shell
 zip = archives
 """
 
+def test_from_ini(tmp_path):
+    conf = tmp_path / "conf.ini"
+
+    with pytest.raises(FileNotFoundError):
+        FileOrganizer.from_ini(conf)
+
+    ini = "[destination_dirs]\npython = Python\n"
+    conf.write_text(ini)
+
+    with pytest.raises(ValueError):
+        FileOrganizer.from_ini(conf)
+
+    ini += (
+        "[signature_patterns]\npy = #!/.+?python\n[extensions_map]\npy = python"
+        ""
+    )
+    conf.write_text(ini)
+
+    organizer = FileOrganizer.from_ini(conf)
+
+    assert "Python" in organizer.destination_dirs
+    assert "Python" == organizer.extensions_map["py"]
+    assert b"#!/.+?python" in organizer.signature_patterns.pattern
+
 
 @pytest.fixture
 def organizer(tmp_path):
