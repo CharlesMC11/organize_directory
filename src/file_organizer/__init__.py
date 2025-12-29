@@ -29,8 +29,10 @@ class FileOrganizer:
     def from_ini(cls, file: Path) -> Self:
         """Use mappings from an ini file.
 
+        :param file: path to an ini file
         Expected headers are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
+
         parser = ConfigParser()
         parser.read(file)
 
@@ -58,7 +60,6 @@ class FileOrganizer:
             signature_patterns: re.Pattern[bytes],
             extensions_map: Mapping[str, str],
     ) -> None:
-        """Load the organizer’s configurations."""
         destination_dirs.add(self.MISC_DIR)
 
         self.destination_dirs: Final = frozenset(destination_dirs)
@@ -69,6 +70,7 @@ class FileOrganizer:
 
     def get_extensionless_dst(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
+
         destination_dir = self.MISC_DIR
         try:
             with file.open("rb") as f:
@@ -88,6 +90,7 @@ class FileOrganizer:
 
     def organize(self, root: Path) -> None:
         """Organize the contents of `root`."""
+
         self._create_destination_dirs(root)
 
         # `move_file()` will move a file’s existing sidecar alongside it, so defer processing XMP files to the end.
@@ -163,7 +166,11 @@ class FileOrganizer:
     # Private methods
 
     def _create_destination_dirs(self, root: Path) -> None:
-        """Create the `destination_dirs` listed in the config file."""
+        """Create the `destination_dirs`.
+
+        :param root: the root directory
+        """
+
         for dst in self.destination_dirs:
             (root / dst).mkdir(parents=True, exist_ok=True)
 
@@ -173,7 +180,8 @@ class FileOrganizer:
     def _get_unique_destination_path(path: Path):
         """Append a counter to the path stem if it’s not a unique path.
 
-        :param path: a destination path a file will be saved to"""
+        :param path: a destination path to saved to
+        """
 
         if not path.exists():
             return path
