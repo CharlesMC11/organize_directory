@@ -151,39 +151,28 @@ class FileOrganizer:
                 elif entry.name == ".DS_Store":
                     continue
 
-                if entry.is_dir():
-                    dst_path = self._get_unique_destination_path(
-                        root / self.MISC_DIR / entry.name
-                    )
-
+                elif entry.is_dir():
+                    dst_path = root / self.MISC_DIR / entry.name
                     self._safely_move(entry, dst_path)
                     continue
 
                 file = Path(entry)
                 file_ext = file.suffix.lstrip(".").lower()
-                if not file_ext:
-                    dst_dir = self.get_extensionless_dst(file)
-                    dst_path = self._get_unique_destination_path(
-                        root / dst_dir / file.name
-                    )
-                    self.move_file_and_sidecar(file, dst_path)
-                    continue
-
-                elif file_ext == "xmp":
+                if file_ext == "xmp":
                     xmp_files.append(file)
                     continue
 
-                dst_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
-                dst_path = self._get_unique_destination_path(
-                    root / dst_dir / file.name
-                )
+                elif not file_ext:
+                    dst_dir = self.get_extensionless_dst(file)
+                else:
+                    dst_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
+
+                dst_path = root / dst_dir / file.name
                 self.move_file_and_sidecar(file, dst_path)
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
-                dst_path = self._get_unique_destination_path(
-                    root / self.MISC_DIR / xmp_file.name
-                )
+                dst_path = root / self.MISC_DIR / xmp_file.name
                 self._safely_move(xmp_file, dst_path)
 
     # Public static methods
