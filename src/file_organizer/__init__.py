@@ -72,7 +72,9 @@ class FileOrganizer:
         """
 
         if not file.is_file():
-            raise FileNotFoundError(f"{file} is not a file")
+            message = f"{file} is not a file"
+            logger.critical(message)
+            raise FileNotFoundError(message)
 
         with file.open("r") as f:
             content = json.load(f)
