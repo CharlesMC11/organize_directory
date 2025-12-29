@@ -124,3 +124,8 @@ def test__get_unique_destination_path(organizer, tmp_path):
     new_path = organizer._get_unique_destination_path(dst)
 
     assert new_path == dst.with_stem(dst.stem + "_1")
+
+    new_path.write_text("Hello, World!")
+    new_path = organizer._get_unique_destination_path(dst)
+
+    assert new_path == dst.with_stem(dst.stem + "_2")
