@@ -51,15 +51,14 @@ class FileOrganizer:
             )
 
         destination_dirs = set(parser["destination_dirs"].values())
+        signature_patterns = parser["signature_patterns"]
 
         extensions_map = {
             ext: parser["destination_dirs"][key]
             for ext, key in parser["extensions_map"].items()
         }
 
-        return cls(
-            destination_dirs, parser["signature_patterns"], extensions_map
-        )
+        return cls(destination_dirs, signature_patterns, extensions_map)
 
     # Magic methods
 
