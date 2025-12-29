@@ -1,0 +1,130 @@
+{
+  "destination_dirs": {
+    "3d": "3D",
+    "blender": "3D/Blender",
+    "maya": "3D/Maya",
+    "audio": "Audio",
+    "archives": "Archives",
+    "documents": "Documents",
+    "spreadsheets": "Documents/Spreadsheets",
+    "images": "Images",
+    "images_raw": "Images/Raw",
+    "programming": "Programming",
+    "assembly": "Programming/Assembly",
+    "c_cpp": "Programming/C:C++",
+    "javascript": "Programming/JavaScript",
+    "python": "Programming/Python",
+    "shell": "Programming/Shell",
+    "videos": "Videos"
+  },
+  "signature_patterns": {
+    "py": "#!/.+?python",
+    "sh": "#!/.+?sh",
+    "zip": "PK\\x03\\x04"
+  },
+  "extensions_map": {
+    "3d": [
+      "abc",
+      "fbx",
+      "obj"
+    ],
+    "blender": [
+      "blend",
+      "blend1"
+    ],
+    "maya": [
+      "ma",
+      "mb"
+    ],
+    "audio": [
+      "mp3"
+    ],
+    "archives": [
+      "7z",
+      "aar",
+      "zip",
+      "gz",
+      "xz",
+      "tar",
+      "txz"
+    ],
+    "documents": [
+      "txt",
+      "md",
+      "rst",
+      "doc",
+      "docx",
+      "pages",
+      "indd",
+      "pdf"
+    ],
+    "spreadsheets": [
+      "csv",
+      "tsv",
+      "xls",
+      "xlsx",
+      "numbers"
+    ],
+    "images": [
+      "exr",
+      "gif",
+      "heic",
+      "jpeg",
+      "jpg",
+      "png",
+      "webp",
+      "tif",
+      "tiff",
+      "clip",
+      "cmc",
+      "kra",
+      "psb",
+      "psd"
+    ],
+    "images_raw": [
+      "dng",
+      "orf"
+    ],
+    "programming": [
+      "cfg",
+      "env",
+      "db",
+      "json",
+      "xml",
+      "yml"
+    ],
+    "assembly": [
+      "s"
+    ],
+    "c_cpp": [
+      "c",
+      "cc",
+      "cpp",
+      "h",
+      "hh",
+      "hpp",
+      "cmake"
+    ],
+    "javascript": [
+      "gs",
+      "js"
+    ],
+    "python": [
+      "py",
+      "pyc",
+      "pyi"
+    ],
+    "shell": [
+      "bash",
+      "sh",
+      "zsh",
+      "zwc"
+    ],
+    "videos": [
+      "mkv",
+      "mov",
+      "mp4",
+      "skba"
+    ]
+  }
+}

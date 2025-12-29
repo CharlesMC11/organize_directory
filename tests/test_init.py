@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from file_organizer import FileOrganizer
@@ -25,30 +27,18 @@ def test_from_ini(tmp_path):
     with pytest.raises(FileNotFoundError):
         FileOrganizer.from_ini(conf)
 
-    ini = """
-[destination_dirs]
-python = Python
-"""
+    ini = "[destination_dirs]\npython = Python"
     conf.write_text(ini)
 
     with pytest.raises(ValueError):
         FileOrganizer.from_ini(conf)
 
-    ini += """
-[signature_patterns]
-py = #!/.+?python
-
-[extensions_map]
-py = python
-"""
-
-    conf.write_text(ini)
-
+    conf = Path(__file__).with_name("extensions_map.ini")
     organizer = FileOrganizer.from_ini(conf)
 
-    assert "Python" in organizer.destination_dirs
+    assert "Programming/Python" in organizer.destination_dirs
     assert b"#!/.+?python" in organizer.signature_patterns.pattern
-    assert "Python" == organizer.extensions_map["py"]
+    assert "Programming/Python" == organizer.extensions_map["py"]
 
 
 def test_from_json(tmp_path):
@@ -57,22 +47,7 @@ def test_from_json(tmp_path):
     with pytest.raises(FileNotFoundError):
         FileOrganizer.from_json(conf)
 
-    json = """
-{
-    "destination_dirs": {
-        "programming": "Programming",
-        "python": "Programming/Python"
-    },
-    "signature_patterns": {
-        "py": "#!/.+?python"
-    },
-    "extensions_map": {
-        "python": ["py", "pyc", "pyi"]
-    }
-}
-"""
-
-    conf.write_text(json)
+    conf = Path(__file__).with_name("extensions_map.json")
     organizer = FileOrganizer.from_json(conf)
 
     assert "Programming/Python" in organizer.destination_dirs
