@@ -6,7 +6,7 @@ import logging
 import os
 import re
 import shutil
-from collections.abc import Mapping, MutableSet
+from collections.abc import Collection, Mapping
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
@@ -50,7 +50,8 @@ class FileOrganizer:
                 f"Missing required sections: {', '.join(missing_sections)}"
             )
 
-        destination_dirs = set(parser["destination_dirs"].values())
+        destination_dirs = parser["destination_dirs"].values()
+
         signature_patterns = parser["signature_patterns"]
 
         extensions_map = {
@@ -64,10 +65,11 @@ class FileOrganizer:
 
     def __init__(
             self,
-            destination_dirs: MutableSet[str],
+            destination_dirs: Collection[str],
             signature_patterns: Mapping[str, str],
             extensions_map: Mapping[str, str],
     ) -> None:
+        destination_dirs = set(destination_dirs)
         destination_dirs.add(self.MISC_DIR)
 
         combined_pattern = "|".join(
