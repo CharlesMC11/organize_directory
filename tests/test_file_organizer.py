@@ -127,18 +127,15 @@ def test_extensionless(organizer, tmp_path):
         f.write(python)
     zipfile_target = organizer.get_extensionless_dst(zipfile)
 
+    unknown = tmp_path / "unknown"
+    unknown.write_text("Some unknown file")
+    unknown_target = organizer.get_extensionless_dst(unknown)
+
     assert python_target == organizer.extensions_map["py"]
     assert bash_target == organizer.extensions_map["sh"]
     assert zipfile_target == organizer.extensions_map["zip"]
+    assert unknown_target == organizer.MISC_DIR
 
-
-def test_misc_fallback(organizer, tmp_path):
-    f = tmp_path / "unknown"
-    f.write_text("Some unknown file")
-
-    target = organizer.get_extensionless_dst(f)
-
-    assert target == organizer.MISC_DIR
 
 
 def test_sidecar(organizer, tmp_path):
