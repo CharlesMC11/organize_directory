@@ -13,7 +13,7 @@ wheels = [
 
 [[package]]
 name = "file-organizer"
-version = "2.0.15"
+version = "2.0.16"
 source = { virtual = "." }
 
 [package.dev-dependencies]

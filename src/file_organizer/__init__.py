@@ -48,8 +48,8 @@ class FileOrganizer:
             )
 
             extensions_map = {
-                ext: parser["destination_dirs"][dst_path]
-                for ext, dst_path in parser["extensions_map"].items()
+                ext: parser["destination_dirs"][key]
+                for ext, key in parser["extensions_map"].items()
             }
         except KeyError:
             raise ValueError(
