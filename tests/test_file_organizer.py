@@ -74,8 +74,35 @@ py = python
     assert "Python" in organizer.destination_dirs
     assert b"#!/.+?python" in organizer.signature_patterns.pattern
     assert "Python" == organizer.extensions_map["py"]
-    assert b"#!/.+?python" in organizer.signature_patterns.pattern
 
+
+def test_from_json(tmp_path):
+    conf = tmp_path / "conf.json"
+
+    with pytest.raises(FileNotFoundError):
+        FileOrganizer.from_json(conf)
+
+    json = """
+{
+    "destination_dirs": {
+        "programming": "Programming",
+        "python": "Programming/Python"
+    },
+    "signature_patterns": {
+        "py": "#!/.+?python"
+    },
+    "extensions_map": {
+        "python": ["py", "pyc", "pyi"]
+    }
+}
+"""
+
+    conf.write_text(json)
+    organizer = FileOrganizer.from_json(conf)
+
+    assert "Programming/Python" in organizer.destination_dirs
+    assert b"#!/.+?python" in organizer.signature_patterns.pattern
+    assert "Programming/Python" in organizer.extensions_map["py"]
 
 @pytest.fixture
 def organizer(tmp_path):

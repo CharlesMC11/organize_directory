@@ -2,6 +2,7 @@
 
 __author__ = "Charles Mesa Cayobit"
 
+import json
 import logging
 import os
 import re
@@ -58,6 +59,31 @@ class FileOrganizer:
             ext: parser["destination_dirs"][key]
             for ext, key in parser["extensions_map"].items()
         }
+
+        return cls(destination_dirs, signature_patterns, extensions_map)
+
+    @classmethod
+    def from_json(cls, file: Path) -> Self:
+        """Use mappings from a JSON file.
+
+        :param file: path to a JSON file
+        Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
+        """
+
+        if not file.is_file():
+            raise FileNotFoundError(f"{file} is not a file")
+
+        with file.open("r") as f:
+            content = json.load(f)
+
+        destination_dirs = content["destination_dirs"].values()
+
+        signature_patterns = content["signature_patterns"]
+
+        extensions_map = {}
+        for key, extensions in content["extensions_map"].items():
+            for ext in extensions:
+                extensions_map[ext] = content["destination_dirs"][key]
 
         return cls(destination_dirs, signature_patterns, extensions_map)
 
