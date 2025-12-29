@@ -6,7 +6,7 @@ import logging
 import os
 import re
 import shutil
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping, MutableSet
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
@@ -35,7 +35,6 @@ class FileOrganizer:
         parser.read(file)
 
         destination_dirs = set(parser["destination_dirs"].values())
-        destination_dirs.add(cls.MISC_DIR)
 
         re_pattern_groups = (
             f"(?P<{key}>{pattern})"
@@ -55,11 +54,13 @@ class FileOrganizer:
 
     def __init__(
             self,
-            destination_dirs: Iterable[str],
+            destination_dirs: MutableSet[str],
             signature_patterns: re.Pattern[bytes],
             extensions_map: Mapping[str, str],
     ) -> None:
         """Load the organizer’s configurations."""
+        destination_dirs.add(self.MISC_DIR)
+
         self.destination_dirs: Final = frozenset(destination_dirs)
         self.signature_patterns: Final = signature_patterns
         self.extensions_map: Final = MappingProxyType(extensions_map)
