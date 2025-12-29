@@ -221,9 +221,10 @@ class FileOrganizer:
 
     @staticmethod
     def _get_unique_destination_path(path: Path) -> Path:
-        """Append a counter to the path stem if it’s not a unique path.
+        """Append a counter to `path`’s stem if it’s not a unique path.
 
         :param path: a destination path to saved to
+        :return: a path with a unique stem
         """
 
         if not path.exists():
@@ -238,7 +239,14 @@ class FileOrganizer:
         return path
 
     @staticmethod
-    def _safely_move(src: Path, dst: Path) -> None:
+    def _safely_move(src: Path, dst: Path) -> bool:
+        """Move `src` to `dst` while ensuring `dst` doesn’t exist.
+
+        :param src: the source file’s full path
+        :param dst: the destination’s full path
+        :return: if the move was successful or not
+        """
+
         try:
             shutil.move(src, dst)
         except OSError as e:
