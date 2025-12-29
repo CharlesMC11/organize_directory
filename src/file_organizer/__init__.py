@@ -196,7 +196,8 @@ class FileOrganizer:
         :param dst: the destination’s full path
         """
 
-        FileOrganizer._safely_move(src, dst)
+        if not FileOrganizer._safely_move(src, dst):
+            return
 
         src_sidecar = src.with_suffix(".xmp")
         if not src_sidecar.exists():
