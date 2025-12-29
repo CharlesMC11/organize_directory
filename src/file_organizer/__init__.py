@@ -33,6 +33,9 @@ class FileOrganizer:
         Expected headers are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
+        if not file.is_file():
+            raise FileNotFoundError(f"{file} is not a file")
+
         parser = ConfigParser()
         parser.read(file)
 
