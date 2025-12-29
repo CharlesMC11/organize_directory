@@ -160,6 +160,8 @@ class FileOrganizer:
         for dst in self.destination_dirs:
             (root / dst).mkdir(parents=True, exist_ok=True)
 
+    # Private static methods
+
     @staticmethod
     def _get_unique_destination_path(path: Path):
         """Append a counter to the path stem if it’s not a unique path.
