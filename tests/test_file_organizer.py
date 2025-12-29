@@ -36,7 +36,7 @@ def organizer(tmp_path):
     return FileOrganizer.from_ini(conf)
 
 
-def test_extensionless(organizer, tmp_path):
+def test_get_extensionless_dst(organizer, tmp_path):
     python = tmp_path / "python"
     python.write_text('#!/usr/bin/env -S python3\n\nprint("Hello, World!")\n')
     python_target = organizer.get_extensionless_dst(python)
