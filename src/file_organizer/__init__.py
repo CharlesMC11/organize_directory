@@ -226,7 +226,7 @@ class FileOrganizer:
     # Private static methods
 
     @staticmethod
-    def _get_unique_destination_path(path: Path):
+    def _get_unique_destination_path(path: Path) -> Path:
         """Append a counter to the path stem if it’s not a unique path.
 
         :param path: a destination path to saved to
