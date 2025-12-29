@@ -129,3 +129,18 @@ def test__get_unique_destination_path(organizer, tmp_path):
     new_path = organizer._get_unique_destination_path(dst)
 
     assert new_path == dst.with_stem(dst.stem + "_2")
+
+
+def test__safely_move(organizer, tmp_path):
+    dst_dir = tmp_path / "dst"
+    dst_dir.mkdir(mode=0o000)
+
+    f = tmp_path / "file.txt"
+    f.write_text("Hello, World!")
+
+    result = organizer._safely_move(f, dst_dir / f.name)
+    assert result == False
+
+    dst_dir.chmod(0o755)
+    result = organizer._safely_move(f, dst_dir / f.name)
+    assert result == True
