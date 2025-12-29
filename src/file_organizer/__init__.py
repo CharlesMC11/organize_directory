@@ -14,7 +14,6 @@ from types import MappingProxyType
 from typing import Final, Self
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class FileOrganizer:
@@ -35,7 +34,9 @@ class FileOrganizer:
         """
 
         if not file.is_file():
-            raise FileNotFoundError(f"{file} is not a file")
+            message = f"{file} is not a file"
+            logger.critical(message)
+            raise FileNotFoundError(message)
 
         parser = ConfigParser()
         parser.read(file)
@@ -137,7 +138,9 @@ class FileOrganizer:
         """Organize the contents of `root`."""
 
         if not root.is_dir():
-            raise NotADirectoryError(f"{root} is not a directory")
+            message = f"{root} is not a directory"
+            logger.critical(message)
+            raise NotADirectoryError(message)
 
         self._create_destination_dirs(root)
 
@@ -175,6 +178,8 @@ class FileOrganizer:
             if xmp_file.exists():
                 dst_path = root / self.MISC_DIR / xmp_file.name
                 self._safely_move(xmp_file, dst_path)
+            else:
+                logger.info(f"{xmp_file} has already been moved")
 
     # Public static methods
 
@@ -191,7 +196,7 @@ class FileOrganizer:
 
         src_sidecar = src.with_suffix(".xmp")
         if not src_sidecar.exists():
-            logger.debug(f"{src_sidecar} does not exist, skipping")
+            logger.info(f"{src_sidecar} does not exist, skipping")
             return
 
         dst_sidecar = dst.with_suffix(".xmp")
@@ -241,7 +246,7 @@ class FileOrganizer:
         try:
             shutil.move(src, FileOrganizer._get_unique_destination_path(dst))
         except OSError as e:
-            logger.error(f"Could not move {src.name}: {e}")
+            logger.warning(f"Could not move {src.name}: {e}")
 
             return False
         return True
