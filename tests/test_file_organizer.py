@@ -50,21 +50,29 @@ def test_from_ini(tmp_path):
     with pytest.raises(FileNotFoundError):
         FileOrganizer.from_ini(conf)
 
-    ini = "[destination_dirs]\npython = Python\n"
+    ini = """
+[destination_dirs]
+python = Python
+"""
     conf.write_text(ini)
 
     with pytest.raises(ValueError):
         FileOrganizer.from_ini(conf)
 
-    ini += (
-        "[signature_patterns]\npy = #!/.+?python\n[extensions_map]\npy = python"
-        ""
-    )
+    ini += """
+[signature_patterns]
+py = #!/.+?python
+
+[extensions_map]
+py = python
+"""
+
     conf.write_text(ini)
 
     organizer = FileOrganizer.from_ini(conf)
 
     assert "Python" in organizer.destination_dirs
+    assert b"#!/.+?python" in organizer.signature_patterns.pattern
     assert "Python" == organizer.extensions_map["py"]
     assert b"#!/.+?python" in organizer.signature_patterns.pattern
 
