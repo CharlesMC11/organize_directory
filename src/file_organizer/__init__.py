@@ -117,22 +117,20 @@ class FileOrganizer:
     def get_extensionless_dst(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
 
-        destination_dir = self.MISC_DIR
         try:
             with file.open("rb") as f:
                 header = f.read(32)
-
         except OSError as e:
             logger.error(f"Could not open file {file.name}: {e}")
+            return self.MISC_DIR
 
-        else:
-            match = self.signature_patterns.match(header)
-            if match is not None:
-                key = match.lastgroup
-                if key is not None:
-                    return self.extensions_map.get(key, self.MISC_DIR)
+        match = self.signature_patterns.match(header)
+        if match is not None:
+            key = match.lastgroup
+            if key is not None:
+                return self.extensions_map.get(key, self.MISC_DIR)
 
-        return destination_dir
+        return self.MISC_DIR
 
     def organize(self, root: Path) -> None:
         """Organize the contents of `root`."""
