@@ -205,7 +205,7 @@ class FileOrganizer:
             return
 
         dst_sidecar = dst.with_suffix(".xmp")
-        FileOrganizer._safely_move(src_sidecar, dst_sidecar)
+        shutil.move(src_sidecar, dst_sidecar)
 
     # Private methods
 
