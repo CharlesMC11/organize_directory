@@ -100,6 +100,9 @@ class FileOrganizer:
     def organize(self, root: Path) -> None:
         """Organize the contents of `root`."""
 
+        if not root.is_dir():
+            raise NotADirectoryError(f"{root} is not a directory")
+
         self._create_destination_dirs(root)
 
         # `move_file()` will move a file’s existing sidecar alongside it, so defer processing XMP files to the end.
