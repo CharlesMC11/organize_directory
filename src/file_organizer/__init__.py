@@ -38,8 +38,11 @@ class FileOrganizer:
 
     # Class attributes
 
-    MISC_DIR: Final = "Misc"
-    MAX_UNIQUE_PATH_ATTEMPTS: Final = 1_000
+    FALLBACK_DIR_NAME: Final = "Misc"
+    CONFIG_FILE_ENCODING: Final = "utf-8"
+    DEFAULT_SIGNATURE_READ_SIZE: Final = 32
+
+    # Private class attributes
 
     _CONFIG_REQUIRED_FIELDS: Final = frozenset(
         {"destination_dirs", "extensions_map"}
@@ -111,8 +114,9 @@ class FileOrganizer:
             destination_dirs: Collection[str],
             extensions_map: Mapping[str, str],
             signature_patterns: Mapping[str, str] | None = None,
+            signature_read_size: int = DEFAULT_SIGNATURE_READ_SIZE,
     ) -> None:
-        unique_dst_dirs = {self.MISC_DIR}
+        unique_dst_dirs = {self.FALLBACK_DIR_NAME}
         unique_dst_dirs.update(destination_dirs)
 
         validated_map = {}
@@ -130,7 +134,7 @@ class FileOrganizer:
             patterns = []
             pattern_groups = {}
 
-            encoding = FileOrganizer.CONFIG_ENCODING
+            encoding = self.CONFIG_FILE_ENCODING
             # `ext` has to be an existing key in `normalized_map`
             for ext, pattern in signature_patterns.items():
                 sanitized_ext = ext.lower()
@@ -150,14 +154,20 @@ class FileOrganizer:
                 pattern_groups[group_name] = sanitized_ext
                 patterns.append(f"(?P<{group_name}>{unescaped_pattern})")
 
-            combined_pattern = "|".join(patterns)
-            compiled_pattern = re.compile(combined_pattern.encode("latin-1"))
+            if patterns:
+                combined_pattern = "|".join(patterns)
+                compiled_pattern = re.compile(
+                    combined_pattern.encode("latin-1"), re.NOFLAG
+                )
 
-            self._pattern_map: Final = MappingProxyType(pattern_groups)
-
+                self._pattern_map: Final = MappingProxyType(pattern_groups)
         self.destination_dirs: Final = frozenset(unique_dst_dirs)
         self.signature_patterns: Final = compiled_pattern
         self.extensions_map: Final = MappingProxyType(validated_map)
+        if signature_read_size <= 0:
+            self.signature_read_size = self.DEFAULT_SIGNATURE_READ_SIZE
+        else:
+            self.signature_read_size = signature_read_size
 
     # Public methods
 
@@ -175,11 +185,9 @@ class FileOrganizer:
                     continue
 
                 elif entry.is_dir():
-                    if entry.name in self.destination_dirs:
-                        continue
-
-                    dst_path = root / self.MISC_DIR / entry.name
-                    self._try_move(Path(entry.path), dst_path)
+                    if entry.name not in self.destination_dirs:
+                        dst_path = root / self.FALLBACK_DIR_NAME / entry.name
+                        self._try_move(Path(entry.path), dst_path)
                     continue
 
                 elif not entry.is_file():
@@ -191,28 +199,33 @@ class FileOrganizer:
                     xmp_files.append(file)
                     continue
 
-                elif not file_ext:
-                    dst_dir = self._get_extensionless_dst(file)
-                else:
-                    dst_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
+                dst_dir = (
+                    self._get_extensionless_dst(file)
+                    if not file_ext
+                    else self.extensions_map.get(
+                        file_ext, self.FALLBACK_DIR_NAME
+                    )
+                )
 
                 dst_path = root / dst_dir / file.name
                 self._move_file_and_sidecar(file, dst_path)
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
-                dst_path = root / self.MISC_DIR / xmp_file.name
+                dst_path = root / self.FALLBACK_DIR_NAME / xmp_file.name
                 self._try_move(xmp_file, dst_path)
             else:
                 logger.info(xmp_file.name + " has already been moved")
 
     # Private methods
 
-    @staticmethod
+    @classmethod
     @contextmanager
-    def _read_validated_config(file: Path) -> Generator[TextIO, None, None]:
+    def _read_validated_config(
+            cls, file: Path
+    ) -> Generator[TextIO, None, None]:
         try:
-            with file.open("r", encoding=FileOrganizer.CONFIG_ENCODING) as f:
+            with file.open("r", encoding=cls.CONFIG_FILE_ENCODING) as f:
                 yield f
         except (FileNotFoundError, IsADirectoryError) as e:
             raise FileNotFoundError(f"No such file: '{file.name}'") from e
@@ -255,27 +268,29 @@ class FileOrganizer:
         """Get the target directory for a file without an extension."""
 
         if self.signature_patterns is None:
-            return self.MISC_DIR
+            return self.FALLBACK_DIR_NAME
 
         try:
             with file.open("rb") as f:
-                header = f.read(32)
+                header = f.read(self.signature_read_size)
         except OSError as e:
             logger.error(f"Could not open file '{file.name}': {e}")
-            return self.MISC_DIR
+            return self.FALLBACK_DIR_NAME
+
+        if not header:
+            return self.FALLBACK_DIR_NAME
 
         match = self.signature_patterns.match(header)
-        if match is None:
-            return self.MISC_DIR
+        if not match:
+            return self.FALLBACK_DIR_NAME
 
-        key = match.lastgroup
-        if key is None:
-            return self.MISC_DIR
+        file_ext = self._pattern_map.get(match.lastgroup)
+        if not file_ext:
+            return self.FALLBACK_DIR_NAME
 
-        return self.extensions_map.get(self._pattern_map[key], self.MISC_DIR)
+        return self.extensions_map.get(file_ext, self.FALLBACK_DIR_NAME)
 
-    @staticmethod
-    def _move_file_and_sidecar(src: Path, dst: Path) -> None:
+    def _move_file_and_sidecar(self, src: Path, dst: Path) -> None:
         """Move a file and, if it exists, its sidecar from `src` into `dst`.
 
         A sidecar file is moved only if its main file is moved successfully.
@@ -285,7 +300,7 @@ class FileOrganizer:
         :param dst: the destination’s full path
         """
 
-        dst = FileOrganizer._try_move(src, dst)
+        dst = self._try_move(src, dst)
         if dst is None:
             return
 
@@ -298,8 +313,7 @@ class FileOrganizer:
             except OSError as e:
                 logger.warning(f"Failed to move: '{src_sidecar.name}': {e}")
 
-    @staticmethod
-    def _try_move(src: Path, dst: Path) -> Path | None:
+    def _try_move(self, src: Path, dst: Path) -> Path | None:
         """Attempt to move `src` to a unique `dst` path.
 
         :param src: the source file’s full path
@@ -308,7 +322,7 @@ class FileOrganizer:
         """
 
         try:
-            dst = FileOrganizer._get_unique_destination_path(dst)
+            dst = self._get_unique_destination_path(dst)
             shutil.move(src, dst)
         except NamingAttemptsExceededError as e:
             msg = f"Failed to create a unique name for '{src.name}': {e}"
@@ -320,15 +334,9 @@ class FileOrganizer:
         else:
             return dst
 
-    @staticmethod
-    def _get_unique_destination_path(path: Path) -> Path:
+    def _get_unique_destination_path(self, path: Path) -> Path:
         """Generate a unique destination path.
 
-        If the destination path exists, the following suffixes are appended for each attempt:
-        1. Date (%Y%m%d)
-        2. Time (%H%M%S)
-        3. Microseconds (%f)
-        4. Padded counter (1 to FileOrganizer.MAX_UNIQUE_PATH_ATTEMPTS)
 
         :param path: a destination path to saved to
         :return: a guaranteed unique path
@@ -339,25 +347,7 @@ class FileOrganizer:
             return path
 
         stem = path.stem
-        timestamp = datetime.now()
-        fmt = "%Y%m%d"
-
-        new_path = path.with_stem(f"{stem}_{timestamp.strftime(fmt)}")
-        if not new_path.exists():
-            return new_path
-
-        fmt += "_%H%M%S"
-        new_path = path.with_stem(f"{stem}_{timestamp.strftime(fmt)}")
-        if not new_path.exists():
-            return new_path
-
-        fmt += "_%f"
-        new_path = path.with_stem(f"{stem}_{timestamp.strftime(fmt)}")
-        if not new_path.exists():
-            return new_path
-
-        stem = new_path.stem
-        max_attempts = FileOrganizer.MAX_UNIQUE_PATH_ATTEMPTS
+        max_attempts = self._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
         padding = len(str(max_attempts))
         for n in range(1, max_attempts):
             new_path = new_path.with_stem(f"{stem}_{n:0{padding}}")

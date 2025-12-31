@@ -64,7 +64,7 @@ def test_get_extensionless_dst(organizer, tmp_path):
     assert python_target == organizer.extensions_map["py"]
     assert bash_target == organizer.extensions_map["sh"]
     assert zipfile_target == organizer.extensions_map["zip"]
-    assert unknown_target == organizer.MISC_DIR
+    assert unknown_target == organizer.FALLBACK_DIR_NAME
 
 
 def test_move_file_and_sidecar(organizer, tmp_path):
@@ -86,13 +86,13 @@ def test_move_file_and_sidecar(organizer, tmp_path):
     xmp3.write_text("Some dangling xmp file")
 
     img_target = tmp_path / organizer.extensions_map.get(
-        img.suffix.lstrip("."), organizer.MISC_DIR
+        img.suffix.lstrip("."), organizer.FALLBACK_DIR_NAME
     )
     raw_target = tmp_path / organizer.extensions_map.get(
-        raw.suffix.lstrip("."), organizer.MISC_DIR
+        raw.suffix.lstrip("."), organizer.FALLBACK_DIR_NAME
     )
     xmp_target = tmp_path / organizer.extensions_map.get(
-        xmp3.suffix.lstrip("."), organizer.MISC_DIR
+        xmp3.suffix.lstrip("."), organizer.FALLBACK_DIR_NAME
     )
 
     assert img_target == tmp_path / "Images"
