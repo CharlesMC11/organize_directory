@@ -303,12 +303,10 @@ class FileOrganizer:
         :param dst: the destination’s full path
         """
 
-        dst = self._try_move(src, dst)
-        if dst is None:
+        if (dst := self._try_move(src, dst)) is None:
             return
 
-        src_sidecar = src.with_suffix(".xmp")
-        if src_sidecar.exists():
+        elif (src_sidecar := src.with_suffix(".xmp")).exists():
             dst_sidecar = dst.with_suffix(".xmp")
             try:
                 # Overwrite existing sidecars in a destination dir
