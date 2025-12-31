@@ -337,7 +337,6 @@ class FileOrganizer:
     def _get_unique_destination_path(path: Path) -> Path:
         """Generate a unique destination path.
 
-
         :param path: a destination path to saved to
         :return: a guaranteed unique path
         :raises NamingAttemptsExceededError: if no unique path can be generated with the attempted limit
