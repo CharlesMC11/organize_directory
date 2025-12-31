@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_ENCODING = "utf-8"
 
 
-class InvalidConfigError(ValueError):
 class FileOrganizerError(Exception): ...
 
+
+class InvalidConfigError(FileOrganizerError, ValueError):
     """Raised when an invalid config file is used."""
 
 
