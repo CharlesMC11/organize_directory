@@ -252,34 +252,36 @@ class FileOrganizer:
         :param dst: the destination’s full path
         """
 
-        if not FileOrganizer._try_move(src, dst):
+        dst = FileOrganizer._try_move(src, dst)
+        if dst is None:
             return
 
         src_sidecar = src.with_suffix(".xmp")
-        if not src_sidecar.exists():
-            logger.info(src_sidecar.name + " does not exist, skipping")
-            return
-
-        dst_sidecar = dst.with_suffix(".xmp")
-        # Overwrite existing sidecars in a destination dir
-        shutil.move(src_sidecar, dst_sidecar)
+        if src_sidecar.exists():
+            dst_sidecar = dst.with_suffix(".xmp")
+            try:
+                # Overwrite existing sidecars in a destination dir
+                shutil.move(src_sidecar, dst_sidecar)
+            except OSError as e:
+                logger.info(f"Failed to move: '{src_sidecar.name}: {e}'")
 
     @staticmethod
-    def _try_move(src: Path, dst: Path) -> bool:
+    def _try_move(src: Path, dst: Path) -> Path | None:
         """Attempt to move `src` to a unique `dst` path.
 
         :param src: the source file’s full path
         :param dst: the destination’s full path
-        :return: if the move was successful or not
+        :return: the final destination path if successful, `None` otherwise
         """
 
+        dst = FileOrganizer._get_unique_destination_path(dst)
         try:
-            shutil.move(src, FileOrganizer._get_unique_destination_path(dst))
+            shutil.move(src, dst)
         except OSError as e:
             logger.warning(f"Could not move {src.name}: {e}")
-
-            return False
-        return True
+            return None
+        else:
+            return dst
 
     @staticmethod
     def _get_unique_destination_path(path: Path) -> Path:
