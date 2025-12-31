@@ -13,9 +13,9 @@ def test_init():
     organizer = FileOrganizer(destination_dirs, extensions_map)
 
     assert "Python" in organizer.destination_dirs
-    assert "PY" not in organizer.extensions_map
-    assert organizer.extensions_map.get("PY") is None
-    assert organizer.extensions_map.get("py") == "Python"
+    assert ".PY" not in organizer.extensions_map
+    assert organizer.extensions_map.get(".PY") is None
+    assert organizer.extensions_map.get(".py") == "Python"
 
     assert organizer.signature_patterns is None
 
@@ -55,7 +55,7 @@ def test_from_ini(tmp_path):
     assert "Programming/Python" in organizer.destination_dirs
     assert b"#!/.+?python" in organizer.signature_patterns.pattern
     assert b"\x89PNG" in organizer.signature_patterns.pattern
-    assert "Programming/Python" == organizer.extensions_map["py"]
+    assert "Programming/Python" == organizer.extensions_map[".py"]
 
 
 def test_from_json(tmp_path):
@@ -75,4 +75,4 @@ def test_from_json(tmp_path):
 
     assert "Programming/Python" in organizer.destination_dirs
     assert b"#!/.+?python" in organizer.signature_patterns.pattern
-    assert "Programming/Python" in organizer.extensions_map["py"]
+    assert "Programming/Python" in organizer.extensions_map[".py"]

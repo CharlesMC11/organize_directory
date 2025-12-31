@@ -119,7 +119,7 @@ class FileOrganizer:
 
         validated_map = {}
         for ext, dst in extensions_map.items():
-            sanitized_ext = ext.lower()
+            sanitized_ext = "." + ext.lower()
 
             # `dst` has be an existing entry in `unique_dst_dirs`
             if dst in unique_dst_dirs:
@@ -162,14 +162,12 @@ class FileOrganizer:
                 elif not entry.is_file():
                     continue
 
-                file = Path(entry.path)
-                file_ext = file.suffix.lstrip(".").lower()
-                if file_ext == "xmp":
+                if entry.name.endswith(".xmp"):
                     xmp_files.append(file)
                     continue
-                elif file_ext.endswith("download"):
-                    continue
 
+                file = Path(entry.path)
+                file_ext = file.suffix
                 dst_dir = (
                     self._get_extensionless_dst(file)
                     if not file_ext
