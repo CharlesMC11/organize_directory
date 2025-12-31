@@ -113,8 +113,7 @@ class FileOrganizer:
             extensions_map: Mapping[str, str],
             signature_patterns: Mapping[str, str] | None = None,
     ) -> None:
-        unique_dst_dirs = {self.FALLBACK_DIR_NAME}
-        unique_dst_dirs.update(destination_dirs)
+        unique_dst_dirs = {self.FALLBACK_DIR_NAME, *destination_dirs}
 
         validated_map = {}
         for ext, dst in extensions_map.items():
