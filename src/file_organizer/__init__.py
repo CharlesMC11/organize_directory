@@ -58,7 +58,7 @@ class FileOrganizer:
         with cls._read_validated_config(file) as f:
             parser.read_file(f)
 
-        cls._validate_required_fields(parser.sections())
+        cls._validate_config_required_fields(parser.sections())
 
         destination_dirs = parser["destination_dirs"].values()
 
@@ -85,7 +85,7 @@ class FileOrganizer:
         with cls._read_validated_config(file) as f:
             content = json.load(f)
 
-        cls._validate_required_fields(content.keys())
+        cls._validate_config_required_fields(content.keys())
 
         destination_dirs = content["destination_dirs"].values()
 
