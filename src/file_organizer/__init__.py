@@ -103,8 +103,8 @@ class FileOrganizer:
             signature_patterns: Mapping[str, str],
             extensions_map: Mapping[str, str],
     ) -> None:
-        destination_dirs = set(destination_dirs)
-        destination_dirs.add(self.MISC_DIR)
+        unique_dst_dirs = {self.MISC_DIR}
+        unique_dst_dirs.update(destination_dirs)
 
         combined_pattern = "|".join(
             f"(?P<{key.lower()}>{pattern})"
@@ -116,7 +116,7 @@ class FileOrganizer:
             ext.lower(): path for ext, path in extensions_map.items()
         }
 
-        self.destination_dirs: Final = frozenset(destination_dirs)
+        self.destination_dirs: Final = frozenset(unique_dst_dirs)
         self.signature_patterns: Final = compiled_pattern
         self.extensions_map: Final = MappingProxyType(extensions_map)
 
