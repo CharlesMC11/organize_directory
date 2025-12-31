@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import re
-import shutil
 from collections.abc import Collection, Generator, Mapping
 from configparser import ConfigParser
 from contextlib import contextmanager
@@ -318,7 +317,7 @@ class FileOrganizer:
             dst_sidecar = dst.with_suffix(".xmp")
             try:
                 # Overwrite existing sidecars in a destination dir
-                shutil.move(src_sidecar, dst_sidecar)
+                src_sidecar.rename(dst_sidecar)
             except OSError as e:
                 logger.warning(f"Failed to move: '{src_sidecar.name}': {e}")
 
@@ -332,7 +331,7 @@ class FileOrganizer:
 
         try:
             dst = self._get_unique_destination_path(dst)
-            shutil.move(src, dst)
+            return src.rename(dst)
         except NamingAttemptsExceededError as e:
             msg = f"Failed to create a unique name for '{src.name}': {e}"
             logger.warning(msg)
@@ -340,8 +339,6 @@ class FileOrganizer:
         except OSError as e:
             logger.warning(f"Failed to move '{src.name}': {e}")
             return None
-        else:
-            return dst
 
     @staticmethod
     def _get_unique_destination_path(path: Path) -> Path:

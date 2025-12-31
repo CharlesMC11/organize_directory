@@ -1,6 +1,6 @@
 [project]
 name = "file-organizer"
-version = "2.0.71"
+version = "2.0.72"
 description = "A script originally intended to organize my Downloads folder."
 readme = "README.md"
 requires-python = ">=3.14"
