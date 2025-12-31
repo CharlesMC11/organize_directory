@@ -39,20 +39,20 @@ def organizer(tmp_path):
 def test_get_extensionless_dst(organizer, tmp_path):
     python = tmp_path / "python"
     python.write_text('#!/usr/bin/env -S python3\n\nprint("Hello, World!")\n')
-    python_target = organizer.get_extensionless_dst(python)
+    python_target = organizer._get_extensionless_dst(python)
 
     bash = tmp_path / "bash"
     bash.write_text("#!/usr/bin/env -S bash\n\necho 'Hello, World!'\n")
-    bash_target = organizer.get_extensionless_dst(bash)
+    bash_target = organizer._get_extensionless_dst(bash)
 
     zipfile = tmp_path / "zip"
     with ZipFile(zipfile, mode="x") as f:
         f.write(python)
-    zipfile_target = organizer.get_extensionless_dst(zipfile)
+    zipfile_target = organizer._get_extensionless_dst(zipfile)
 
     unknown = tmp_path / "unknown"
     unknown.write_text("Some unknown file")
-    unknown_target = organizer.get_extensionless_dst(unknown)
+    unknown_target = organizer._get_extensionless_dst(unknown)
 
     assert python_target == organizer.extensions_map["py"]
     assert bash_target == organizer.extensions_map["sh"]
@@ -91,8 +91,8 @@ def test_move_file_and_sidecar(organizer, tmp_path):
     assert img_target == tmp_path / "Images"
     assert raw_target == tmp_path / "Images/Raw"
 
-    organizer.move_file_and_sidecar(img, img_target / img.name)
-    organizer.move_file_and_sidecar(raw, raw_target / raw.name)
+    organizer._move_file_and_sidecar(img, img_target / img.name)
+    organizer._move_file_and_sidecar(raw, raw_target / raw.name)
 
     assert (img_target / "jpeg.jpeg").exists()
     assert (img_target / "jpeg.xmp").exists()
@@ -138,9 +138,9 @@ def test__safely_move(organizer, tmp_path):
     f = tmp_path / "file.txt"
     f.write_text("Hello, World!")
 
-    result = organizer._safely_move(f, dst_dir / f.name)
+    result = organizer._try_move(f, dst_dir / f.name)
     assert result == False
 
     dst_dir.chmod(0o755)
-    result = organizer._safely_move(f, dst_dir / f.name)
+    result = organizer._try_move(f, dst_dir / f.name)
     assert result == True

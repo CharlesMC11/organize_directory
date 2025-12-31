@@ -43,6 +43,12 @@ def test_from_ini(tmp_path):
     with pytest.raises(InvalidConfigError, match="Missing required sections:"):
         FileOrganizer.from_ini(conf)
 
+    ini += "\n[extensions_map]py = python"
+    conf.write_text(ini)
+    organizer = FileOrganizer.from_ini(conf)
+
+    assert organizer.signature_patterns is None
+
     conf = Path(__file__).with_name("extensions_map.ini")
     organizer = FileOrganizer.from_ini(conf)
 

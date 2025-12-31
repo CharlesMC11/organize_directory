@@ -30,6 +30,10 @@ class FileOrganizer:
 
     MISC_DIR: Final = "Misc"
 
+    _CONFIG_REQUIRED_FIELDS: Final = frozenset(
+        {"destination_dirs", "extensions_map"}
+    )
+
     # Class methods
 
     @classmethod
@@ -133,7 +137,89 @@ class FileOrganizer:
 
     # Public methods
 
-    def get_extensionless_dst(self, file: Path) -> str:
+    def organize(self, root: Path) -> None:
+        """Organize the contents of `root`."""
+
+        self._create_destination_dirs(root)
+
+        # `move_file_and_sidecar()` will move a file’s existing sidecar alongside it, so defer processing the rest XMP files to the end.
+        xmp_files: list[Path] = []
+
+        with os.scandir(root) as it:
+            for entry in it:
+                if entry.name == ".DS_Store" or entry.is_symlink():
+                    continue
+
+                elif entry.is_dir():
+                    if entry.name in self.destination_dirs:
+                        continue
+
+                    dst_path = root / self.MISC_DIR / entry.name
+                    self._try_move(Path(entry.path), dst_path)
+                    continue
+
+                elif not entry.is_file():
+                    continue
+
+                file = Path(entry.path)
+                file_ext = file.suffix.lstrip(".").lower()
+                if file_ext == "xmp":
+                    xmp_files.append(file)
+                    continue
+
+                elif not file_ext:
+                    dst_dir = self._get_extensionless_dst(file)
+                else:
+                    dst_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
+
+                dst_path = root / dst_dir / file.name
+                self._move_file_and_sidecar(file, dst_path)
+
+        for xmp_file in xmp_files:
+            if xmp_file.exists():
+                dst_path = root / self.MISC_DIR / xmp_file.name
+                self._try_move(xmp_file, dst_path)
+            else:
+                logger.info(xmp_file.name + " has already been moved")
+
+    # Private methods
+
+    @staticmethod
+    @contextmanager
+    def _read_validated_config(file: Path) -> Generator[TextIO, None, None]:
+        try:
+            with file.open("r", encoding=DEFAULT_ENCODING) as f:
+                yield f
+        except (FileNotFoundError, IsADirectoryError):
+            raise InvalidConfigError(f"No such file: '{file.name}'")
+        except PermissionError:
+            raise InvalidConfigError(f"Permission denied: '{file.name}'")
+        except Exception as e:
+            raise InvalidConfigError(f"Invalid config: '{file.name}': {e}")
+
+    @classmethod
+    def _validate_required_fields(cls, keys: Collection[str]) -> None:
+        if missing := cls._CONFIG_REQUIRED_FIELDS - frozenset(keys):
+            message = "Missing required sections: " + ", ".join(missing)
+            raise InvalidConfigError(message)
+
+    def _create_destination_dirs(self, root: Path) -> None:
+        """Create the `destination_dirs`.
+
+        :param root: the root directory
+        """
+
+        if not root.is_dir():
+            raise NotADirectoryError(f"Not a directory: '{root.name}'")
+
+        try:
+            for dst in self.destination_dirs:
+                (root / dst).mkdir(parents=True, exist_ok=True)
+        except PermissionError as e:
+            e.strerror = f"Permission denied: '{root.name}'"
+            raise e
+
+    def _get_extensionless_dst(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
 
         if self.signature_patterns is None:
@@ -156,62 +242,15 @@ class FileOrganizer:
 
         return self.extensions_map.get(self._pattern_map[key], self.MISC_DIR)
 
-    def organize(self, root: Path) -> None:
-        """Organize the contents of `root`."""
-
-        self._create_destination_dirs(root)
-
-        # `move_file_and_sidecar()` will move a file’s existing sidecar alongside it, so defer processing the rest XMP files to the end.
-        xmp_files: list[Path] = []
-
-        with os.scandir(root) as it:
-            for entry in it:
-                if entry.name == ".DS_Store" or entry.is_symlink():
-                    continue
-
-                elif entry.is_dir():
-                    if entry.name in self.destination_dirs:
-                        continue
-
-                    dst_path = root / self.MISC_DIR / entry.name
-                    self._safely_move(Path(entry.path), dst_path)
-                    continue
-
-                elif not entry.is_file():
-                    continue
-
-                file = Path(entry.path)
-                file_ext = file.suffix.lstrip(".").lower()
-                if file_ext == "xmp":
-                    xmp_files.append(file)
-                    continue
-
-                elif not file_ext:
-                    dst_dir = self.get_extensionless_dst(file)
-                else:
-                    dst_dir = self.extensions_map.get(file_ext, self.MISC_DIR)
-
-                dst_path = root / dst_dir / file.name
-                self.move_file_and_sidecar(file, dst_path)
-
-        for xmp_file in xmp_files:
-            if xmp_file.exists():
-                dst_path = root / self.MISC_DIR / xmp_file.name
-                self._safely_move(xmp_file, dst_path)
-            else:
-                logger.info(xmp_file.name + " has already been moved")
-
-    # Public static methods
-
     @staticmethod
-    def move_file_and_sidecar(src: Path, dst: Path) -> None:
+    def _move_file_and_sidecar(src: Path, dst: Path) -> None:
         """Move a file and, if it exists, its sidecar from `src` into `dst`.
 
         :param src: the source file’s full path
         :param dst: the destination’s full path
         """
 
-        if not FileOrganizer._safely_move(src, dst):
+        if not FileOrganizer._try_move(src, dst):
             return
 
         src_sidecar = src.with_suffix(".xmp")
@@ -223,49 +262,22 @@ class FileOrganizer:
         # Overwrite existing sidecars in a destination dir
         shutil.move(src_sidecar, dst_sidecar)
 
-    # Public class attributes
+    @staticmethod
+    def _try_move(src: Path, dst: Path) -> bool:
+        """Attempt to move `src` to a unique `dst` path.
 
-    _CONFIG_REQUIRED_FIELDS: Final = frozenset(
-        {"destination_dirs", "extensions_map"}
-    )
-
-    # Private methods
-
-    def _create_destination_dirs(self, root: Path) -> None:
-        """Create the `destination_dirs`.
-
-        :param root: the root directory
+        :param src: the source file’s full path
+        :param dst: the destination’s full path
+        :return: if the move was successful or not
         """
 
-        if not root.is_dir():
-            raise NotADirectoryError(f"Not a directory: '{root.name}'")
-
         try:
-            for dst in self.destination_dirs:
-                (root / dst).mkdir(parents=True, exist_ok=True)
-        except PermissionError:
-            raise
+            shutil.move(src, FileOrganizer._get_unique_destination_path(dst))
+        except OSError as e:
+            logger.warning(f"Could not move {src.name}: {e}")
 
-    # Private static methods
-
-    @staticmethod
-    @contextmanager
-    def _read_validated_config(file: Path) -> Generator[TextIO, None, None]:
-        try:
-            with file.open("r", encoding=DEFAULT_ENCODING) as f:
-                yield f
-        except (FileNotFoundError, IsADirectoryError):
-            raise InvalidConfigError(f"No such file: '{file.name}'")
-        except PermissionError:
-            raise InvalidConfigError(f"Permission denied: '{file.name}'")
-        except Exception as e:
-            raise InvalidConfigError(f"Invalid config: '{file.name}': {e}")
-
-    @classmethod
-    def _validate_required_fields(cls, keys: Collection[str]) -> None:
-        if missing := cls._CONFIG_REQUIRED_FIELDS - frozenset(keys):
-            message = "Missing required sections: " + ", ".join(missing)
-            raise InvalidConfigError(message)
+            return False
+        return True
 
     @staticmethod
     def _get_unique_destination_path(path: Path) -> Path:
@@ -285,20 +297,3 @@ class FileOrganizer:
             counter += 1
 
         return path
-
-    @staticmethod
-    def _safely_move(src: Path, dst: Path) -> bool:
-        """Move `src` to `dst` while ensuring `dst` doesn’t exist.
-
-        :param src: the source file’s full path
-        :param dst: the destination’s full path
-        :return: if the move was successful or not
-        """
-
-        try:
-            shutil.move(src, FileOrganizer._get_unique_destination_path(dst))
-        except OSError as e:
-            logger.warning(f"Could not move {src.name}: {e}")
-
-            return False
-        return True
