@@ -46,6 +46,7 @@ class FileOrganizer:
         {"destination_dirs", "extensions_map"}
     )
     _GROUP_PATTERN_NAME_SANITIZER: Final = re.compile(r"\W")
+    _IGNORED_FILES: Final = frozenset({".DS_Store", ".localized"})
     _MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS: Final = 1_000
 
     # Class methods
@@ -146,10 +147,9 @@ class FileOrganizer:
         # `move_file_and_sidecar()` will move a file’s existing sidecar alongside it, so defer processing the rest XMP files to the end.
         xmp_files: list[Path] = []
 
-        ignore_list = {".DS_Store", ".localized"}
         with os.scandir(root) as it:
             for entry in it:
-                if entry.name in ignore_list or entry.is_symlink():
+                if entry.name in self._IGNORED_FILES or entry.is_symlink():
                     continue
 
                 elif entry.is_dir():
