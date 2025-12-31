@@ -11,7 +11,7 @@ from collections.abc import Collection, Mapping
 from configparser import ConfigParser
 from pathlib import Path
 from types import MappingProxyType
-from typing import Final, Self
+from typing import Final, NoReturn, Self
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +35,7 @@ class FileOrganizer:
         Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
-        if not file.is_file():
-            message = file.name + " is not a file"
-            logger.critical(message)
-            raise FileNotFoundError(message)
+        cls._validate_config_file(file)
 
         parser = ConfigParser()
         with file.open("r", encoding=DEFAULT_ENCODING) as f:
@@ -75,17 +72,8 @@ class FileOrganizer:
         Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
-        try:
-            with file.open("r") as f:
-                content = json.load(f)
-        except (FileNotFoundError, IsADirectoryError) as e:
-            message = file.name + " is not a file"
-            logger.critical(message)
-            raise FileNotFoundError(message)
-        except PermissionError as e:
-            message = file.name + " could not be opened"
-            logger.critical(message)
-            raise e
+        cls._validate_config_file(file)
+
         with file.open("r", encoding=DEFAULT_ENCODING) as f:
             content = json.load(f)
 
@@ -230,6 +218,14 @@ class FileOrganizer:
             (root / dst).mkdir(parents=True, exist_ok=True)
 
     # Private static methods
+
+    @staticmethod
+    def _validate_config_file(file: Path) -> None | NoReturn:
+        if not file.is_file():
+            raise FileNotFoundError(f"File {file} does not exist")
+
+        elif not os.access(file, os.R_OK):
+            raise PermissionError(f"File {file} is not readable")
 
     @staticmethod
     def _get_unique_destination_path(path: Path) -> Path:
