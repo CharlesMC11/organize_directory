@@ -147,7 +147,7 @@ class FileOrganizer:
 
         self._create_destination_dirs(root)
 
-        # `move_file()` will move a file’s existing sidecar alongside it, so defer processing XMP files to the end.
+        # `move_file_and_sidecar()` will move a file’s existing sidecar alongside it, so defer processing the rest XMP files to the end.
         xmp_files: list[Path] = []
 
         with os.scandir(root) as it:
@@ -203,6 +203,7 @@ class FileOrganizer:
             return
 
         dst_sidecar = dst.with_suffix(".xmp")
+        # Overwrite existing sidecars in a destination dir
         shutil.move(src_sidecar, dst_sidecar)
 
     # Private methods
