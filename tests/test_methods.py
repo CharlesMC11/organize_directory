@@ -134,8 +134,8 @@ def test__safely_move(organizer, tmp_path):
     f.write_text("Hello, World!")
 
     result = organizer._try_move(f, dst_dir / f.name)
-    assert result == False
+    assert result is None
 
     dst_dir.chmod(0o755)
     result = organizer._try_move(f, dst_dir / f.name)
-    assert result == True
+    assert result == dst_dir / f.name
