@@ -15,6 +15,8 @@ from typing import Final, Self
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_ENCODING = "utf-8"
+
 
 class FileOrganizer:
     """Class for organizing files and directories."""
@@ -39,7 +41,8 @@ class FileOrganizer:
             raise FileNotFoundError(message)
 
         parser = ConfigParser()
-        parser.read(file)
+        with file.open("r", encoding=DEFAULT_ENCODING) as f:
+            parser.read_file(f)
 
         required_sections = {
             "destination_dirs",
@@ -83,6 +86,8 @@ class FileOrganizer:
             message = file.name + " could not be opened"
             logger.critical(message)
             raise e
+        with file.open("r", encoding=DEFAULT_ENCODING) as f:
+            content = json.load(f)
 
         destination_dirs = content["destination_dirs"].values()
 
@@ -110,7 +115,9 @@ class FileOrganizer:
             f"(?P<{key.lower()}>{pattern})"
             for key, pattern in signature_patterns.items()
         )
-        compiled_pattern = re.compile(combined_pattern.encode("utf-8"))
+        compiled_pattern = re.compile(
+            combined_pattern.encode(DEFAULT_ENCODING)
+        )
 
         extensions_map = {
             ext.lower(): path for ext, path in extensions_map.items()
