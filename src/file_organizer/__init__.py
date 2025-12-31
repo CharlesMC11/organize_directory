@@ -30,6 +30,7 @@ class FileOrganizer:
     # Class attributes
 
     MISC_DIR: Final = "Misc"
+    MAX_UNIQUE_PATH_ATTEMPTS: Final = 1_000
 
     _CONFIG_REQUIRED_FIELDS: Final = frozenset(
         {"destination_dirs", "extensions_map"}
@@ -291,5 +292,33 @@ class FileOrganizer:
         if not path.exists():
             return path
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        return path.with_stem(f"{path.stem}_{timestamp}")
+        stem = path.stem
+        timestamp = datetime.now()
+        fmt = "%Y%m%d"
+
+        new_path = path.with_stem(f"{stem}_{timestamp.strftime(fmt)}")
+        if not new_path.exists():
+            return new_path
+
+        fmt += "_%H%M%S"
+        new_path = path.with_stem(f"{stem}_{timestamp.strftime(fmt)}")
+        if not new_path.exists():
+            return new_path
+
+        fmt += "_%f"
+        new_path = path.with_stem(f"{stem}_{timestamp.strftime(fmt)}")
+        if not new_path.exists():
+            return new_path
+
+        stem = new_path.stem
+        max_attempts = FileOrganizer.MAX_UNIQUE_PATH_ATTEMPTS
+        padding = len(str(max_attempts))
+        for n in range(1, max_attempts):
+            new_path = new_path.with_stem(f"{stem}_{n:0{padding}}")
+            if not new_path.exists():
+                return new_path
+
+        raise RuntimeError(
+            f"Could not create a unique filename for {path.name} "
+            f"after {max_attempts:,} attempts"
+        )

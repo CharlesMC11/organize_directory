@@ -124,7 +124,6 @@ def test__get_unique_destination_path(organizer, tmp_path):
     new_path = organizer._get_unique_destination_path(dst)
 
     assert len(new_path.stem) > len(dst.stem)
-    assert len(new_path.stem[5:]) == 22
 
 
 def test__safely_move(organizer, tmp_path):
