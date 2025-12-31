@@ -127,41 +127,16 @@ class FileOrganizer:
             else:
                 logger.warning(f"{dst} not in `destination_dirs`, ignoring.")
 
-        compiled_pattern = None
-        if signature_patterns:
-            patterns = []
-            pattern_groups = {}
+        patterns = self._compile_signature_patterns(
+            signature_patterns, validated_map.keys()
+        )
 
-            encoding = self.CONFIG_FILE_ENCODING
-            # `ext` has to be an existing key in `normalized_map`
-            for ext, pattern in signature_patterns.items():
-                sanitized_ext = ext.lower()
-                unescaped_pattern = pattern.encode(encoding).decode(
-                    "unicode_escape"
-                )
-
-                if sanitized_ext not in validated_map:
-                    logger.warning(
-                        f"{sanitized_ext} not in `extensions_map`, ignoring."
-                    )
-                    continue
-
-                group_name = "g_" + self._GROUP_PATTERN_NAME_SANITIZER.sub(
-                    "_", sanitized_ext
-                )
-                pattern_groups[group_name] = sanitized_ext
-                patterns.append(f"(?P<{group_name}>{unescaped_pattern})")
-
-            if patterns:
-                combined_pattern = "|".join(patterns)
-                compiled_pattern = re.compile(
-                    combined_pattern.encode("latin-1"), re.NOFLAG
-                )
-
-                self._pattern_map: Final = MappingProxyType(pattern_groups)
         self.destination_dirs: Final = frozenset(unique_dst_dirs)
-        self.signature_patterns: Final = compiled_pattern
         self.extensions_map: Final = MappingProxyType(validated_map)
+        try:
+            self.signature_patterns, self._pattern_map = patterns
+        except TypeError:
+            self.signature_patterns = None
 
     # Public methods
 
@@ -242,6 +217,47 @@ class FileOrganizer:
         if missing := FileOrganizer._CONFIG_REQUIRED_FIELDS - frozenset(keys):
             message = "Missing required sections: " + ", ".join(missing)
             raise MissingRequiredFieldsError(message)
+
+    def _compile_signature_patterns(
+            self,
+            signature_patterns: Mapping[str, str] | None,
+            validated_extensions: Collection[str],
+    ) -> tuple[re.Pattern[bytes], MappingProxyType[str, str]] | None:
+        if not signature_patterns:
+            return None
+
+        pattern_groups = []
+        pattern_name_map = {}
+
+        encoding = self.CONFIG_FILE_ENCODING
+        # `ext` has to be an existing key in `normalized_map`
+        for ext, pattern in signature_patterns.items():
+            sanitized_ext = "." + ext.lower()
+            unescaped_pattern = pattern.encode(encoding).decode(
+                "unicode_escape"
+            )
+
+            if sanitized_ext not in validated_extensions:
+                logger.warning(
+                    f"{sanitized_ext} not in `extensions_map`, ignoring."
+                )
+                continue
+
+            group_name = "g_" + self._GROUP_PATTERN_NAME_SANITIZER.sub(
+                "_", sanitized_ext
+            )
+            pattern_name_map[group_name] = sanitized_ext
+            pattern_groups.append(f"(?P<{group_name}>{unescaped_pattern})")
+
+        if not pattern_groups:
+            return None
+
+        combined_pattern = "|".join(pattern_groups)
+        compiled_pattern = re.compile(
+            combined_pattern.encode("latin-1"), re.NOFLAG
+        )
+
+        return compiled_pattern, MappingProxyType(pattern_name_map)
 
     def _create_destination_dirs(self, root: Path) -> None:
         """Create the `destination_dirs`.
