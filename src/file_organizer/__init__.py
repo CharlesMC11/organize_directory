@@ -46,6 +46,7 @@ class FileOrganizer:
     )
 
     CONFIG_ENCODING = "utf-8"
+    _GROUP_PATTERN_NAME_SANITIZER: Final = re.compile(r"\W")
 
     # Class methods
 
@@ -117,11 +118,13 @@ class FileOrganizer:
 
         validated_map = {}
         for ext, dst in extensions_map.items():
-            validated_ext = ext.lower()
+            sanitized_ext = ext.lower()
 
             # `dst` has be an existing entry in `unique_dst_dirs`
             if dst in unique_dst_dirs:
-                validated_map[validated_ext] = dst
+                validated_map[sanitized_ext] = dst
+            else:
+                logger.warning(f"{dst} not in `destination_dirs`, ignoring.")
 
         compiled_pattern = None
         if signature_patterns:
@@ -131,16 +134,21 @@ class FileOrganizer:
             encoding = FileOrganizer.CONFIG_ENCODING
             # `ext` has to be an existing key in `normalized_map`
             for ext, pattern in signature_patterns.items():
-                validated_ext = ext.lower()
+                sanitized_ext = ext.lower()
                 unescaped_pattern = pattern.encode(encoding).decode(
                     "unicode_escape"
                 )
 
-                if validated_ext not in validated_map:
+                if sanitized_ext not in validated_map:
+                    logger.warning(
+                        f"{sanitized_ext} not in `extensions_map`, ignoring."
+                    )
                     continue
 
-                group_name = "g_" + validated_ext
-                pattern_groups[group_name] = validated_ext
+                group_name = "g_" + self._GROUP_PATTERN_NAME_SANITIZER.sub(
+                    "_", sanitized_ext
+                )
+                pattern_groups[group_name] = sanitized_ext
                 patterns.append(f"(?P<{group_name}>{unescaped_pattern})")
 
             combined_pattern = "|".join(patterns)
