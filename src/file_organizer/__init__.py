@@ -72,13 +72,17 @@ class FileOrganizer:
         Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
-        if not file.is_file():
+        try:
+            with file.open("r") as f:
+                content = json.load(f)
+        except (FileNotFoundError, IsADirectoryError) as e:
             message = file.name + " is not a file"
             logger.critical(message)
             raise FileNotFoundError(message)
-
-        with file.open("r") as f:
-            content = json.load(f)
+        except PermissionError as e:
+            message = file.name + " could not be opened"
+            logger.critical(message)
+            raise e
 
         destination_dirs = content["destination_dirs"].values()
 

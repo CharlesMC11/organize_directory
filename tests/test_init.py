@@ -47,6 +47,12 @@ def test_from_json(tmp_path):
     with pytest.raises(FileNotFoundError):
         FileOrganizer.from_json(conf)
 
+    conf.write_text("Some JSON")
+    conf.chmod(0)
+
+    with pytest.raises(PermissionError):
+        FileOrganizer.from_json(conf)
+
     conf = Path(__file__).with_name("extensions_map.json")
     organizer = FileOrganizer.from_json(conf)
 
