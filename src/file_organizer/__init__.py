@@ -44,17 +44,7 @@ class FileOrganizer:
         with cls._read_validated_config(file) as f:
             parser.read_file(f)
 
-        required_sections = {
-            "destination_dirs",
-            "signature_patterns",
-            "extensions_map",
-        }
-        missing_sections = required_sections - frozenset(parser.sections())
-        if missing_sections:
-            message = "Missing required sections: " + ", ".join(
-                missing_sections
-            )
-            raise InvalidConfigError(message)
+        cls._validate_required_fields(parser.sections())
 
         destination_dirs = parser["destination_dirs"].values()
 
@@ -77,6 +67,8 @@ class FileOrganizer:
 
         with cls._read_validated_config(file) as f:
             content = json.load(f)
+
+        cls._validate_required_fields(content.keys())
 
         destination_dirs = content["destination_dirs"].values()
 
@@ -225,6 +217,12 @@ class FileOrganizer:
         # Overwrite existing sidecars in a destination dir
         shutil.move(src_sidecar, dst_sidecar)
 
+    # Public class attributes
+
+    _CONFIG_REQUIRED_FIELDS: Final = frozenset(
+        {"destination_dirs", "extensions_map"}
+    )
+
     # Private methods
 
     def _create_destination_dirs(self, root: Path) -> None:
@@ -256,6 +254,12 @@ class FileOrganizer:
             raise InvalidConfigError(f"Permission denied: '{file.name}'")
         except Exception as e:
             raise InvalidConfigError(f"Invalid config: '{file.name}': {e}")
+
+    @classmethod
+    def _validate_required_fields(cls, keys: Collection[str]) -> None:
+        if missing := cls._CONFIG_REQUIRED_FIELDS - frozenset(keys):
+            message = "Missing required sections: " + ", ".join(missing)
+            raise InvalidConfigError(message)
 
     @staticmethod
     def _get_unique_destination_path(path: Path) -> Path:
