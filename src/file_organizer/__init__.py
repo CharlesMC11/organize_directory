@@ -34,7 +34,7 @@ class FileOrganizer:
         """
 
         if not file.is_file():
-            message = f"{file} is not a file"
+            message = file.name + " is not a file"
             logger.critical(message)
             raise FileNotFoundError(message)
 
@@ -48,9 +48,10 @@ class FileOrganizer:
         }
         missing_sections = required_sections - frozenset(parser.sections())
         if missing_sections:
-            raise ValueError(
-                f"Missing required sections: {', '.join(missing_sections)}"
+            message = "Missing required sections: " + ", ".join(
+                missing_sections
             )
+            raise ValueError(message)
 
         destination_dirs = parser["destination_dirs"].values()
 
@@ -72,7 +73,7 @@ class FileOrganizer:
         """
 
         if not file.is_file():
-            message = f"{file} is not a file"
+            message = file.name + " is not a file"
             logger.critical(message)
             raise FileNotFoundError(message)
 
@@ -141,7 +142,7 @@ class FileOrganizer:
         """Organize the contents of `root`."""
 
         if not root.is_dir():
-            message = f"{root} is not a directory"
+            message = root.name + " is not a directory"
             logger.critical(message)
             raise NotADirectoryError(message)
 
@@ -182,7 +183,7 @@ class FileOrganizer:
                 dst_path = root / self.MISC_DIR / xmp_file.name
                 self._safely_move(xmp_file, dst_path)
             else:
-                logger.info(f"{xmp_file} has already been moved")
+                logger.info(xmp_file.name + " has already been moved")
 
     # Public static methods
 
@@ -199,7 +200,7 @@ class FileOrganizer:
 
         src_sidecar = src.with_suffix(".xmp")
         if not src_sidecar.exists():
-            logger.info(f"{src_sidecar} does not exist, skipping")
+            logger.info(src_sidecar.name + " does not exist, skipping")
             return
 
         dst_sidecar = dst.with_suffix(".xmp")
