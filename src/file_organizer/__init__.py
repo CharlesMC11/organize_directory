@@ -41,7 +41,7 @@ class FileOrganizer:
         """
 
         parser = ConfigParser()
-        with cls._safely_open_config(file) as f:
+        with cls._read_validated_config(file) as f:
             parser.read_file(f)
 
         required_sections = {
@@ -75,7 +75,7 @@ class FileOrganizer:
         Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
-        with cls._safely_open_config(file) as f:
+        with cls._read_validated_config(file) as f:
             content = json.load(f)
 
         destination_dirs = content["destination_dirs"].values()
@@ -222,7 +222,9 @@ class FileOrganizer:
 
     @staticmethod
     @contextmanager
-    def _safely_open_config(file: Path) -> Generator[TextIO, None, None] | NoReturn:
+    def _read_validated_config(
+            file: Path,
+    ) -> Generator[TextIO, None, None] | NoReturn:
         try:
             with file.open("r", encoding=DEFAULT_ENCODING) as f:
                 yield f
