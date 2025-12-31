@@ -3,16 +3,16 @@
 __author__ = "Charles Mesa Cayobit"
 
 import logging
-import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
-from file_organizer import FileOrganizer, __name__ as fo_name
+from file_organizer import FileOrganizer
+from file_organizer import __name__ as fo_name
 
 logger = logging.getLogger(fo_name)
 logger.setLevel(logging.DEBUG)
 
-handler = logging.StreamHandler(sys.stdout)
+handler = logging.StreamHandler()
 logger.addHandler(handler)
 
 if __name__ == "__main__":
