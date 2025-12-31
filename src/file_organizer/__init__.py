@@ -48,14 +48,16 @@ class FileOrganizer:
 
         destination_dirs = parser["destination_dirs"].values()
 
-        signature_patterns = parser["signature_patterns"]
-
         extensions_map = {
             ext: parser["destination_dirs"][key]
             for ext, key in parser["extensions_map"].items()
         }
 
-        return cls(destination_dirs, signature_patterns, extensions_map)
+        signature_patterns = None
+        if "signature_patterns" in parser:
+            signature_patterns = parser["signature_patterns"]
+
+        return cls(destination_dirs, extensions_map, signature_patterns)
 
     @classmethod
     def from_json(cls, file: Path) -> Self:
@@ -72,21 +74,22 @@ class FileOrganizer:
 
         destination_dirs = content["destination_dirs"].values()
 
-        signature_patterns = content["signature_patterns"]
-
         extensions_map = {}
         for key, extensions in content["extensions_map"].items():
             for ext in extensions:
                 extensions_map[ext] = content["destination_dirs"][key]
 
-        return cls(destination_dirs, signature_patterns, extensions_map)
+        signature_patterns = None
+        if "signature_patterns" in content:
+            signature_patterns = content["signature_patterns"]
+
+        return cls(destination_dirs, extensions_map, signature_patterns)
 
     # Magic methods
 
     def __init__(
             self,
             destination_dirs: Collection[str],
-            signature_patterns: Mapping[str, str],
             extensions_map: Mapping[str, str],
             signature_patterns: Mapping[str, str] | None = None,
     ) -> None:
