@@ -146,13 +146,16 @@ class FileOrganizer:
         # `move_file_and_sidecar()` will move a file’s existing sidecar alongside it, so defer processing the rest XMP files to the end.
         xmp_files: list[Path] = []
 
+        ignore_list = {".DS_Store", ".localized"}
         with os.scandir(root) as it:
             for entry in it:
-                if entry.name == ".DS_Store" or entry.is_symlink():
+                if entry.name in ignore_list or entry.is_symlink():
                     continue
 
                 elif entry.is_dir():
-                    if entry.name not in self.destination_dirs:
+                    if entry.name.endswith("download"):
+                        continue
+                    elif entry.name not in self.destination_dirs:
                         dst_path = root / self.FALLBACK_DIR_NAME / entry.name
                         self._try_move(Path(entry.path), dst_path)
                     continue
