@@ -209,7 +209,7 @@ class FileOrganizer:
             raise InvalidConfigError(f"Invalid config: '{file.name}': {e}")
 
     @classmethod
-    def _validate_required_fields(cls, keys: Collection[str]) -> None:
+    def _validate_config_required_fields(cls, keys: Collection[str]) -> None:
         """Validate the required fields of a config file.
 
         :raises InvalidConfigError: if any of the required fields are missing
