@@ -118,7 +118,7 @@ class FileOrganizer:
 
         validated_map = {}
         for ext, dst in extensions_map.items():
-            sanitized_ext = "." + ext.lower()
+            sanitized_ext = self._sanitize_file_extension(ext)
 
             # `dst` has be an existing entry in `unique_dst_dirs`
             if dst in unique_dst_dirs:
@@ -211,6 +211,12 @@ class FileOrganizer:
             message = "Missing required sections: " + ", ".join(missing)
             raise MissingRequiredFieldsError(message)
 
+    @staticmethod
+    def _sanitize_file_extension(ext: str) -> str:
+        if ext := ext.strip(" .").lower():
+            return "." + ext
+        return ""
+
     def _compile_signature_patterns(
             self,
             signature_patterns: Mapping[str, str] | None,
@@ -225,7 +231,7 @@ class FileOrganizer:
         encoding = self.CONFIG_FILE_ENCODING
         # `ext` has to be an existing key in `normalized_map`
         for ext, pattern in signature_patterns.items():
-            sanitized_ext = "." + ext.lower()
+            sanitized_ext = self._sanitize_file_extension(ext)
             unescaped_pattern = pattern.encode(encoding).decode(
                 "unicode_escape"
             )
