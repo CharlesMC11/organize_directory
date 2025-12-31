@@ -10,6 +10,7 @@ import shutil
 from collections.abc import Collection, Generator, Mapping
 from configparser import ConfigParser
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Final, Self, TextIO
@@ -290,10 +291,5 @@ class FileOrganizer:
         if not path.exists():
             return path
 
-        stem = path.stem
-        counter = 1
-        while path.exists():
-            path = path.with_stem(f"{stem}_{counter}")
-            counter += 1
-
-        return path
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        return path.with_stem(f"{path.stem}_{timestamp}")
