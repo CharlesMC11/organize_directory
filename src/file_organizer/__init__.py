@@ -12,7 +12,7 @@ from configparser import ConfigParser
 from contextlib import contextmanager
 from pathlib import Path
 from types import MappingProxyType
-from typing import Final, NoReturn, Self, TextIO
+from typing import Final, Self, TextIO
 
 logger = logging.getLogger(__name__)
 
@@ -246,9 +246,7 @@ class FileOrganizer:
 
     @staticmethod
     @contextmanager
-    def _read_validated_config(
-            file: Path,
-    ) -> Generator[TextIO, None, None] | NoReturn:
+    def _read_validated_config(file: Path) -> Generator[TextIO, None, None]:
         try:
             with file.open("r", encoding=DEFAULT_ENCODING) as f:
                 yield f
