@@ -166,15 +166,18 @@ class FileOrganizer:
 
         with os.scandir(root) as it:
             for entry in it:
-                if entry.name in self.destination_dirs:
-                    continue
-
-                elif entry.name == ".DS_Store":
+                if entry.name == ".DS_Store" or entry.is_symlink():
                     continue
 
                 elif entry.is_dir():
+                    if entry.name in self.destination_dirs:
+                        continue
+
                     dst_path = root / self.MISC_DIR / entry.name
-                    self._safely_move(entry, dst_path)
+                    self._safely_move(Path(entry.path), dst_path)
+                    continue
+
+                elif not entry.is_file():
                     continue
 
                 file = Path(entry.path)
