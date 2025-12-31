@@ -17,8 +17,6 @@ from typing import Final, Self, TextIO
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_ENCODING = "utf-8"
-
 
 class FileOrganizerError(Exception): ...
 
@@ -46,6 +44,8 @@ class FileOrganizer:
     _CONFIG_REQUIRED_FIELDS: Final = frozenset(
         {"destination_dirs", "extensions_map"}
     )
+
+    CONFIG_ENCODING = "utf-8"
 
     # Class methods
 
@@ -115,40 +115,42 @@ class FileOrganizer:
         unique_dst_dirs = {self.MISC_DIR}
         unique_dst_dirs.update(destination_dirs)
 
-        normalized_map = {}
+        validated_map = {}
         for ext, dst in extensions_map.items():
-            normalized_ext = ext.lower()
+            validated_ext = ext.lower()
 
             # `dst` has be an existing entry in `unique_dst_dirs`
             if dst in unique_dst_dirs:
-                normalized_map[normalized_ext] = dst
+                validated_map[validated_ext] = dst
 
         compiled_pattern = None
         if signature_patterns:
             patterns = []
             pattern_groups = {}
 
+            encoding = FileOrganizer.CONFIG_ENCODING
             # `ext` has to be an existing key in `normalized_map`
             for ext, pattern in signature_patterns.items():
-                normalized_ext = ext.lower()
+                validated_ext = ext.lower()
+                unescaped_pattern = pattern.encode(encoding).decode(
+                    "unicode_escape"
+                )
 
-                if normalized_ext not in normalized_map:
+                if validated_ext not in validated_map:
                     continue
 
-                group_name = "g_" + normalized_ext
-                pattern_groups[group_name] = normalized_ext
-                patterns.append(f"(?P<{group_name}>{pattern})")
+                group_name = "g_" + validated_ext
+                pattern_groups[group_name] = validated_ext
+                patterns.append(f"(?P<{group_name}>{unescaped_pattern})")
 
             combined_pattern = "|".join(patterns)
-            compiled_pattern = re.compile(
-                combined_pattern.encode(DEFAULT_ENCODING)
-            )
+            compiled_pattern = re.compile(combined_pattern.encode("latin-1"))
 
             self._pattern_map: Final = MappingProxyType(pattern_groups)
 
         self.destination_dirs: Final = frozenset(unique_dst_dirs)
         self.signature_patterns: Final = compiled_pattern
-        self.extensions_map: Final = MappingProxyType(normalized_map)
+        self.extensions_map: Final = MappingProxyType(validated_map)
 
     # Public methods
 
@@ -203,7 +205,7 @@ class FileOrganizer:
     @contextmanager
     def _read_validated_config(file: Path) -> Generator[TextIO, None, None]:
         try:
-            with file.open("r", encoding=DEFAULT_ENCODING) as f:
+            with file.open("r", encoding=FileOrganizer.CONFIG_ENCODING) as f:
                 yield f
         except (FileNotFoundError, IsADirectoryError) as e:
             raise FileNotFoundError(f"No such file: '{file.name}'") from e

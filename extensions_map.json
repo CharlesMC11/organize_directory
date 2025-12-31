@@ -18,6 +18,7 @@
     "videos": "Videos"
   },
   "signature_patterns": {
+    "png": "\\x89PNG",
     "py": "#!/.+?python",
     "sh": "#!/.+?sh",
     "zip": "PK\\x03\\x04"

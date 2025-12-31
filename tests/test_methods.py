@@ -5,7 +5,7 @@ import pytest
 
 from file_organizer import FileOrganizer
 
-TEST_CONFIG = """
+TEST_CONFIG = r"""
 [destination_dirs]
 archives = Archives
 images = Images
@@ -15,12 +15,14 @@ python = Programming/Python
 shell = Programming/Shell
 
 [signature_patterns]
+png = \x89PNG
 py = #!/.+?python
 sh = #!/.+?sh
 zip = PK\x03\x04
 
 [extensions_map]
 jpeg = images
+png = images
 dng = images_raw
 py = python
 sh = shell
@@ -37,6 +39,10 @@ def organizer(tmp_path):
 
 
 def test_get_extensionless_dst(organizer, tmp_path):
+    png = tmp_path / "png"
+    png.write_bytes(b"\x89PNG")
+    png_target = organizer._get_extensionless_dst(png)
+
     python = tmp_path / "python"
     python.write_text('#!/usr/bin/env -S python3\n\nprint("Hello, World!")\n')
     python_target = organizer._get_extensionless_dst(python)
@@ -54,6 +60,7 @@ def test_get_extensionless_dst(organizer, tmp_path):
     unknown.write_text("Some unknown file")
     unknown_target = organizer._get_extensionless_dst(unknown)
 
+    assert png_target == organizer.extensions_map["png"]
     assert python_target == organizer.extensions_map["py"]
     assert bash_target == organizer.extensions_map["sh"]
     assert zipfile_target == organizer.extensions_map["zip"]

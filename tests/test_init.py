@@ -54,6 +54,7 @@ def test_from_ini(tmp_path):
 
     assert "Programming/Python" in organizer.destination_dirs
     assert b"#!/.+?python" in organizer.signature_patterns.pattern
+    assert b"\x89PNG" in organizer.signature_patterns.pattern
     assert "Programming/Python" == organizer.extensions_map["py"]
 
 
