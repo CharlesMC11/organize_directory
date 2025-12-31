@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from file_organizer import FileOrganizer
+from file_organizer import FileOrganizer, InvalidConfigError
 
 
 def test_init():
@@ -24,13 +24,18 @@ def test_init():
 def test_from_ini(tmp_path):
     conf = tmp_path / "conf.ini"
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(InvalidConfigError, match="No such file:"):
         FileOrganizer.from_ini(conf)
 
     ini = "[destination_dirs]\npython = Python"
     conf.write_text(ini)
 
-    with pytest.raises(ValueError):
+    conf.chmod(0)
+    with pytest.raises(InvalidConfigError, match="Permission denied:"):
+        FileOrganizer.from_ini(conf)
+
+    conf.chmod(0o755)
+    with pytest.raises(InvalidConfigError, match="Missing required sections:"):
         FileOrganizer.from_ini(conf)
 
     conf = Path(__file__).with_name("extensions_map.ini")
@@ -44,13 +49,13 @@ def test_from_ini(tmp_path):
 def test_from_json(tmp_path):
     conf = tmp_path / "conf.json"
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(InvalidConfigError, match="No such file:"):
         FileOrganizer.from_json(conf)
 
     conf.write_text("Some JSON")
     conf.chmod(0)
 
-    with pytest.raises(PermissionError):
+    with pytest.raises(InvalidConfigError, match="Permission denied:"):
         FileOrganizer.from_json(conf)
 
     conf = Path(__file__).with_name("extensions_map.json")

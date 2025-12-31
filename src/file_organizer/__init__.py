@@ -7,15 +7,20 @@ import logging
 import os
 import re
 import shutil
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Generator, Mapping
 from configparser import ConfigParser
+from contextlib import contextmanager
 from pathlib import Path
 from types import MappingProxyType
-from typing import Final, NoReturn, Self
+from typing import Final, NoReturn, Self, TextIO
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_ENCODING = "utf-8"
+
+
+class InvalidConfigError(ValueError):
+    """Raised when an invalid config file is used."""
 
 
 class FileOrganizer:
@@ -35,10 +40,8 @@ class FileOrganizer:
         Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
-        cls._validate_config_file(file)
-
         parser = ConfigParser()
-        with file.open("r", encoding=DEFAULT_ENCODING) as f:
+        with cls._safely_open_config(file) as f:
             parser.read_file(f)
 
         required_sections = {
@@ -51,7 +54,7 @@ class FileOrganizer:
             message = "Missing required sections: " + ", ".join(
                 missing_sections
             )
-            raise ValueError(message)
+            raise InvalidConfigError(message)
 
         destination_dirs = parser["destination_dirs"].values()
 
@@ -72,9 +75,7 @@ class FileOrganizer:
         Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
-        cls._validate_config_file(file)
-
-        with file.open("r", encoding=DEFAULT_ENCODING) as f:
+        with cls._safely_open_config(file) as f:
             content = json.load(f)
 
         destination_dirs = content["destination_dirs"].values()
@@ -220,12 +221,17 @@ class FileOrganizer:
     # Private static methods
 
     @staticmethod
-    def _validate_config_file(file: Path) -> None | NoReturn:
-        if not file.is_file():
-            raise FileNotFoundError(f"File {file} does not exist")
-
-        elif not os.access(file, os.R_OK):
-            raise PermissionError(f"File {file} is not readable")
+    @contextmanager
+    def _safely_open_config(file: Path) -> Generator[TextIO, None, None] | NoReturn:
+        try:
+            with file.open("r", encoding=DEFAULT_ENCODING) as f:
+                yield f
+        except (FileNotFoundError, IsADirectoryError):
+            raise InvalidConfigError(f"No such file: '{file.name}'")
+        except PermissionError:
+            raise InvalidConfigError(f"Permission denied: '{file.name}'")
+        except Exception as e:
+            raise InvalidConfigError(f"Invalid config: '{file.name}': {e}")
 
     @staticmethod
     def _get_unique_destination_path(path: Path) -> Path:
