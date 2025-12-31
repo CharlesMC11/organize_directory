@@ -39,7 +39,7 @@ class FileOrganizer:
 
     FALLBACK_DIR_NAME: Final = "Misc"
     CONFIG_FILE_ENCODING: Final = "utf-8"
-    DEFAULT_SIGNATURE_READ_SIZE: Final = 32
+    SIGNATURE_READ_SIZE: Final = 32
 
     # Private class attributes
 
@@ -113,7 +113,6 @@ class FileOrganizer:
             destination_dirs: Collection[str],
             extensions_map: Mapping[str, str],
             signature_patterns: Mapping[str, str] | None = None,
-            signature_read_size: int = DEFAULT_SIGNATURE_READ_SIZE,
     ) -> None:
         unique_dst_dirs = {self.FALLBACK_DIR_NAME}
         unique_dst_dirs.update(destination_dirs)
@@ -163,10 +162,6 @@ class FileOrganizer:
         self.destination_dirs: Final = frozenset(unique_dst_dirs)
         self.signature_patterns: Final = compiled_pattern
         self.extensions_map: Final = MappingProxyType(validated_map)
-        if signature_read_size <= 0:
-            self.signature_read_size = self.DEFAULT_SIGNATURE_READ_SIZE
-        else:
-            self.signature_read_size = signature_read_size
 
     # Public methods
 
@@ -237,14 +232,14 @@ class FileOrganizer:
         except Exception:
             raise
 
-    @classmethod
-    def _validate_config_required_fields(cls, keys: Collection[str]) -> None:
+    @staticmethod
+    def _validate_config_required_fields(keys: Collection[str]) -> None:
         """Validate the required fields of a config file.
 
         :raises InvalidConfigError: if any of the required fields are missing
         """
 
-        if missing := cls._CONFIG_REQUIRED_FIELDS - frozenset(keys):
+        if missing := FileOrganizer._CONFIG_REQUIRED_FIELDS - frozenset(keys):
             message = "Missing required sections: " + ", ".join(missing)
             raise MissingRequiredFieldsError(message)
 
@@ -272,7 +267,7 @@ class FileOrganizer:
 
         try:
             with file.open("rb") as f:
-                header = f.read(self.signature_read_size)
+                header = f.read(self.SIGNATURE_READ_SIZE)
         except OSError as e:
             logger.error(f"Could not open file '{file.name}': {e}")
             return self.FALLBACK_DIR_NAME
@@ -334,7 +329,8 @@ class FileOrganizer:
         else:
             return dst
 
-    def _get_unique_destination_path(self, path: Path) -> Path:
+    @staticmethod
+    def _get_unique_destination_path(path: Path) -> Path:
         """Generate a unique destination path.
 
 
@@ -347,7 +343,7 @@ class FileOrganizer:
             return path
 
         stem = path.stem
-        max_attempts = self._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
+        max_attempts = FileOrganizer._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
         padding = len(str(max_attempts))
         for n in range(1, max_attempts):
             new_path = path.with_stem(f"{stem}_{n:0{padding}}")
