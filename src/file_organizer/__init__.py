@@ -132,9 +132,10 @@ class FileOrganizer:
             return self.MISC_DIR
 
         key = match.lastgroup
-        if key is not None:
-            return self.extensions_map.get(key, self.MISC_DIR)
-        return self.MISC_DIR
+        if key is None:
+            return self.MISC_DIR
+
+        return self.extensions_map.get(key, self.MISC_DIR)
 
     def organize(self, root: Path) -> None:
         """Organize the contents of `root`."""
