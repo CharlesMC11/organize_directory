@@ -246,7 +246,7 @@ class FileOrganizer:
             with file.open("rb") as f:
                 header = f.read(32)
         except OSError as e:
-            logger.error(f"Could not open file {file.name}: {e}")
+            logger.error(f"Could not open file '{file.name}': {e}")
             return self.MISC_DIR
 
         match = self.signature_patterns.match(header)
@@ -281,7 +281,7 @@ class FileOrganizer:
                 # Overwrite existing sidecars in a destination dir
                 shutil.move(src_sidecar, dst_sidecar)
             except OSError as e:
-                logger.info(f"Failed to move: '{src_sidecar.name}: {e}'")
+                logger.warning(f"Failed to move: '{src_sidecar.name}': {e}")
 
     @staticmethod
     def _try_move(src: Path, dst: Path) -> Path | None:
