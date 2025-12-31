@@ -210,11 +210,11 @@ class FileOrganizer:
         except (FileNotFoundError, IsADirectoryError) as e:
             raise FileNotFoundError(f"No such file: '{file.name}'") from e
         except PermissionError:
-            raise PermissionError(f"Permission denied: '{file.name}'")
+            raise
         except MissingRequiredFieldsError:
             raise
-        except Exception as e:
-            raise InvalidConfigError(f"Invalid config: '{file.name}': {e}")
+        except Exception:
+            raise
 
     @classmethod
     def _validate_config_required_fields(cls, keys: Collection[str]) -> None:
@@ -225,7 +225,7 @@ class FileOrganizer:
 
         if missing := cls._CONFIG_REQUIRED_FIELDS - frozenset(keys):
             message = "Missing required sections: " + ", ".join(missing)
-            raise InvalidConfigError(message)
+            raise MissingRequiredFieldsError(message)
 
     def _create_destination_dirs(self, root: Path) -> None:
         """Create the `destination_dirs`.
