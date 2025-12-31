@@ -163,7 +163,7 @@ class FileOrganizer:
                     self._safely_move(entry, dst_path)
                     continue
 
-                file = Path(entry)
+                file = Path(entry.path)
                 file_ext = file.suffix.lstrip(".").lower()
                 if file_ext == "xmp":
                     xmp_files.append(file)
