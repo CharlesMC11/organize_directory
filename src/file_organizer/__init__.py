@@ -195,13 +195,7 @@ class FileOrganizer:
             with file.open("r", encoding=cls.CONFIG_FILE_ENCODING) as f:
                 yield f
         except (FileNotFoundError, IsADirectoryError) as e:
-            raise FileNotFoundError(f"No such file: '{file.name}'") from e
-        except PermissionError:
-            raise
-        except MissingRequiredFieldsError:
-            raise
-        except Exception:
-            raise
+            raise FileNotFoundError from e
 
     @staticmethod
     def _validate_config_required_fields(keys: Collection[str]) -> None:
@@ -264,7 +258,6 @@ class FileOrganizer:
 
         if not root.is_dir():
             raise NotADirectoryError(f"Not a directory: '{root.name}'")
-
         try:
             for dst in self.destination_dirs:
                 (root / dst).mkdir(parents=True, exist_ok=True)

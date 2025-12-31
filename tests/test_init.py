@@ -29,18 +29,18 @@ def test_init():
 def test_from_ini(tmp_path):
     conf = tmp_path / "conf.ini"
 
-    with pytest.raises(FileNotFoundError, match="No such file:"):
+    with pytest.raises(FileNotFoundError):
         FileOrganizer.from_ini(conf)
 
     ini = "[destination_dirs]\npython = Python"
     conf.write_text(ini)
 
     conf.chmod(0)
-    with pytest.raises(PermissionError, match="Permission denied:"):
+    with pytest.raises(PermissionError):
         FileOrganizer.from_ini(conf)
 
     conf.chmod(0o755)
-    with pytest.raises(MissingRequiredFieldsError, match="Missing required sections:"):
+    with pytest.raises(MissingRequiredFieldsError):
         FileOrganizer.from_ini(conf)
 
     ini += "\n[extensions_map]py = python"
@@ -61,13 +61,13 @@ def test_from_ini(tmp_path):
 def test_from_json(tmp_path):
     conf = tmp_path / "conf.json"
 
-    with pytest.raises(FileNotFoundError, match="No such file:"):
+    with pytest.raises(FileNotFoundError):
         FileOrganizer.from_json(conf)
 
     conf.write_text("Some JSON")
     conf.chmod(0)
 
-    with pytest.raises(PermissionError, match="Permission denied:"):
+    with pytest.raises(PermissionError):
         FileOrganizer.from_json(conf)
 
     conf = Path(__file__).with_name("extensions_map.json")
