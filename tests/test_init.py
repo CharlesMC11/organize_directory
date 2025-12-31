@@ -10,15 +10,20 @@ def test_init():
     signature_patterns = {"PY": "#!/.+?python"}
     extensions_map = {"PY": "Python"}
 
-    organizer = FileOrganizer(
-        destination_dirs, signature_patterns, extensions_map
-    )
+    organizer = FileOrganizer(destination_dirs, extensions_map)
 
     assert "Python" in organizer.destination_dirs
-    assert b"#!/.+?python" in organizer.signature_patterns.pattern
-
     assert "PY" not in organizer.extensions_map
-    assert "Python" in organizer.extensions_map["py"]
+    assert organizer.extensions_map.get("PY") is None
+    assert organizer.extensions_map.get("py") == "Python"
+
+    assert organizer.signature_patterns is None
+
+    organizer = FileOrganizer(
+        destination_dirs, extensions_map, signature_patterns
+    )
+
+    assert b"#!/.+?python" in organizer.signature_patterns.pattern
 
 
 def test_from_ini(tmp_path):

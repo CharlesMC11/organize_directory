@@ -96,30 +96,53 @@ class FileOrganizer:
             destination_dirs: Collection[str],
             signature_patterns: Mapping[str, str],
             extensions_map: Mapping[str, str],
+            signature_patterns: Mapping[str, str] | None = None,
     ) -> None:
         unique_dst_dirs = {self.MISC_DIR}
         unique_dst_dirs.update(destination_dirs)
 
-        combined_pattern = "|".join(
-            f"(?P<{key.lower()}>{pattern})"
-            for key, pattern in signature_patterns.items()
-        )
-        compiled_pattern = re.compile(
-            combined_pattern.encode(DEFAULT_ENCODING)
-        )
+        normalized_map = {}
+        for ext, dst in extensions_map.items():
+            normalized_ext = ext.lower()
 
-        extensions_map = {
-            ext.lower(): path for ext, path in extensions_map.items()
-        }
+            # `dst` has be an existing entry in `unique_dst_dirs`
+            if dst in unique_dst_dirs:
+                normalized_map[normalized_ext] = dst
+
+        compiled_pattern = None
+        if signature_patterns:
+            patterns = []
+            pattern_groups = {}
+
+            # `ext` has to be an existing key in `normalized_map`
+            for ext, pattern in signature_patterns.items():
+                normalized_ext = ext.lower()
+
+                if normalized_ext not in normalized_map:
+                    continue
+
+                group_name = "g_" + normalized_ext
+                pattern_groups[group_name] = normalized_ext
+                patterns.append(f"(?P<{group_name}>{pattern})")
+
+            combined_pattern = "|".join(patterns)
+            compiled_pattern = re.compile(
+                combined_pattern.encode(DEFAULT_ENCODING)
+            )
+
+            self._pattern_map: Final = MappingProxyType(pattern_groups)
 
         self.destination_dirs: Final = frozenset(unique_dst_dirs)
         self.signature_patterns: Final = compiled_pattern
-        self.extensions_map: Final = MappingProxyType(extensions_map)
+        self.extensions_map: Final = MappingProxyType(normalized_map)
 
     # Public methods
 
     def get_extensionless_dst(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
+
+        if self.signature_patterns is None:
+            return self.MISC_DIR
 
         try:
             with file.open("rb") as f:
@@ -136,7 +159,7 @@ class FileOrganizer:
         if key is None:
             return self.MISC_DIR
 
-        return self.extensions_map.get(key, self.MISC_DIR)
+        return self.extensions_map.get(self._pattern_map[key], self.MISC_DIR)
 
     def organize(self, root: Path) -> None:
         """Organize the contents of `root`."""
