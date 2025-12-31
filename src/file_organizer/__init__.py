@@ -21,7 +21,13 @@ DEFAULT_ENCODING = "utf-8"
 
 
 class InvalidConfigError(ValueError):
+class FileOrganizerError(Exception): ...
+
     """Raised when an invalid config file is used."""
+
+
+class UniqueFilenameGenerationError(FileOrganizerError):
+    """Raised when a unique filename cannot be generated."""
 
 
 class FileOrganizer:
@@ -274,11 +280,15 @@ class FileOrganizer:
         :return: the final destination path if successful, `None` otherwise
         """
 
-        dst = FileOrganizer._get_unique_destination_path(dst)
         try:
+            dst = FileOrganizer._get_unique_destination_path(dst)
             shutil.move(src, dst)
+        except UniqueFilenameGenerationError as e:
+            msg = f"Failed to create a unique name for '{src.name}': {e}"
+            logger.warning(msg)
+            return None
         except OSError as e:
-            logger.warning(f"Could not move {src.name}: {e}")
+            logger.warning(f"Failed to move '{src.name}': {e}")
             return None
         else:
             return dst
@@ -288,7 +298,8 @@ class FileOrganizer:
         """Append a counter to `path`’s stem if it’s not a unique path.
 
         :param path: a destination path to saved to
-        :return: a path with a unique stem
+        :return: a guaranteed unique path
+        :raises UniqueFilenameGenerationError: if no unique path can be generated with the attempted limit
         """
 
         if not path.exists():
@@ -320,7 +331,7 @@ class FileOrganizer:
             if not new_path.exists():
                 return new_path
 
-        raise RuntimeError(
+        raise UniqueFilenameGenerationError(
             f"Could not create a unique filename for {path.name} "
             f"after {max_attempts:,} attempts"
         )
