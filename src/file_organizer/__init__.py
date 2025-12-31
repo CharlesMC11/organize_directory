@@ -27,7 +27,11 @@ class InvalidConfigError(FileOrganizerError, ValueError):
     """Raised when an invalid config file is used."""
 
 
-class UniqueFilenameGenerationError(FileOrganizerError):
+class MissingRequiredFieldsError(InvalidConfigError):
+    """Raised when required fields in a config file are missing."""
+
+
+class NamingAttemptsExceededError(FileOrganizerError):
     """Raised when a unique filename cannot be generated."""
 
 
@@ -201,10 +205,12 @@ class FileOrganizer:
         try:
             with file.open("r", encoding=DEFAULT_ENCODING) as f:
                 yield f
-        except (FileNotFoundError, IsADirectoryError):
-            raise InvalidConfigError(f"No such file: '{file.name}'")
+        except (FileNotFoundError, IsADirectoryError) as e:
+            raise FileNotFoundError(f"No such file: '{file.name}'") from e
         except PermissionError:
-            raise InvalidConfigError(f"Permission denied: '{file.name}'")
+            raise PermissionError(f"Permission denied: '{file.name}'")
+        except MissingRequiredFieldsError:
+            raise
         except Exception as e:
             raise InvalidConfigError(f"Invalid config: '{file.name}': {e}")
 
@@ -295,7 +301,7 @@ class FileOrganizer:
         try:
             dst = FileOrganizer._get_unique_destination_path(dst)
             shutil.move(src, dst)
-        except UniqueFilenameGenerationError as e:
+        except NamingAttemptsExceededError as e:
             msg = f"Failed to create a unique name for '{src.name}': {e}"
             logger.warning(msg)
             return None
@@ -317,7 +323,7 @@ class FileOrganizer:
 
         :param path: a destination path to saved to
         :return: a guaranteed unique path
-        :raises UniqueFilenameGenerationError: if no unique path can be generated with the attempted limit
+        :raises NamingAttemptsExceededError: if no unique path can be generated with the attempted limit
         """
 
         if not path.exists():
@@ -349,7 +355,7 @@ class FileOrganizer:
             if not new_path.exists():
                 return new_path
 
-        raise UniqueFilenameGenerationError(
+        raise NamingAttemptsExceededError(
             f"Could not create a unique filename for {path.name} "
             f"after {max_attempts:,} attempts"
         )
