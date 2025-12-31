@@ -47,9 +47,10 @@ class FileOrganizer:
 
     @classmethod
     def from_ini(cls, file: Path) -> Self:
-        """Use mappings from an ini file.
+        """Initialize the organizer using an INI configuration file.
 
         :param file: path to an ini file
+
         Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
@@ -74,9 +75,10 @@ class FileOrganizer:
 
     @classmethod
     def from_json(cls, file: Path) -> Self:
-        """Use mappings from a JSON file.
+        """Initialize the organizer using a JSON configuration file.
 
         :param file: path to a JSON file
+        :raises InvalidConfigError: if config file
         Required sections are `destination_dirs`, `signature_patterns`, and `extensions_map`.
         """
 
@@ -208,6 +210,11 @@ class FileOrganizer:
 
     @classmethod
     def _validate_required_fields(cls, keys: Collection[str]) -> None:
+        """Validate the required fields of a config file.
+
+        :raises InvalidConfigError: if any of the required fields are missing
+        """
+
         if missing := cls._CONFIG_REQUIRED_FIELDS - frozenset(keys):
             message = "Missing required sections: " + ", ".join(missing)
             raise InvalidConfigError(message)
@@ -216,6 +223,7 @@ class FileOrganizer:
         """Create the `destination_dirs`.
 
         :param root: the root directory
+        :raises PermissionError: if `root` cannot be accessed
         """
 
         if not root.is_dir():
@@ -255,6 +263,9 @@ class FileOrganizer:
     def _move_file_and_sidecar(src: Path, dst: Path) -> None:
         """Move a file and, if it exists, its sidecar from `src` into `dst`.
 
+        A sidecar file is moved only if its main file is moved successfully.
+        If moving the sidecar file fails, the process continues.
+
         :param src: the source file’s full path
         :param dst: the destination’s full path
         """
@@ -278,7 +289,7 @@ class FileOrganizer:
 
         :param src: the source file’s full path
         :param dst: the destination’s full path
-        :return: the final destination path if successful, `None` otherwise
+        :return: the final destination path if the move succeeds, `None` if an OSError is raised
         """
 
         try:
@@ -296,7 +307,13 @@ class FileOrganizer:
 
     @staticmethod
     def _get_unique_destination_path(path: Path) -> Path:
-        """Append a counter to `path`’s stem if it’s not a unique path.
+        """Generate a unique destination path.
+
+        If the destination path exists, the following suffixes are appended for each attempt:
+        1. Date (%Y%m%d)
+        2. Time (%H%M%S)
+        3. Microseconds (%f)
+        4. Padded counter (1 to FileOrganizer.MAX_UNIQUE_PATH_ATTEMPTS)
 
         :param path: a destination path to saved to
         :return: a guaranteed unique path
