@@ -141,11 +141,6 @@ class FileOrganizer:
     def organize(self, root: Path) -> None:
         """Organize the contents of `root`."""
 
-        if not root.is_dir():
-            message = root.name + " is not a directory"
-            logger.critical(message)
-            raise NotADirectoryError(message)
-
         self._create_destination_dirs(root)
 
         # `move_file_and_sidecar()` will move a file’s existing sidecar alongside it, so defer processing the rest XMP files to the end.
@@ -215,8 +210,14 @@ class FileOrganizer:
         :param root: the root directory
         """
 
-        for dst in self.destination_dirs:
-            (root / dst).mkdir(parents=True, exist_ok=True)
+        if not root.is_dir():
+            raise NotADirectoryError(f"Not a directory: '{root.name}'")
+
+        try:
+            for dst in self.destination_dirs:
+                (root / dst).mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            raise
 
     # Private static methods
 
