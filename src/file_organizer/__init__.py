@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
-from typing import Final, Self, TextIO
+from typing import Final, TextIO
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +44,13 @@ class FileOrganizer:
     _CONFIG_REQUIRED_FIELDS: Final = frozenset(
         {"destination_dirs", "extensions_map"}
     )
-
-    CONFIG_ENCODING = "utf-8"
     _GROUP_PATTERN_NAME_SANITIZER: Final = re.compile(r"\W")
+    _MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS: Final = 1_000
 
     # Class methods
 
     @classmethod
-    def from_ini(cls, file: Path) -> Self:
+    def from_ini(cls, file: Path) -> FileOrganizer:
         """Initialize the organizer using an INI configuration file.
 
         :param file: path to an ini file
@@ -79,7 +78,7 @@ class FileOrganizer:
         return cls(destination_dirs, extensions_map, signature_patterns)
 
     @classmethod
-    def from_json(cls, file: Path) -> Self:
+    def from_json(cls, file: Path) -> FileOrganizer:
         """Initialize the organizer using a JSON configuration file.
 
         :param file: path to a JSON file
