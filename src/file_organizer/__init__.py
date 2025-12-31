@@ -10,7 +10,6 @@ import shutil
 from collections.abc import Collection, Generator, Mapping
 from configparser import ConfigParser
 from contextlib import contextmanager
-from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Final, TextIO
@@ -198,6 +197,8 @@ class FileOrganizer:
                 if file_ext == "xmp":
                     xmp_files.append(file)
                     continue
+                elif file_ext.endswith("download"):
+                    continue
 
                 dst_dir = (
                     self._get_extensionless_dst(file)
@@ -260,9 +261,8 @@ class FileOrganizer:
         try:
             for dst in self.destination_dirs:
                 (root / dst).mkdir(parents=True, exist_ok=True)
-        except PermissionError as e:
-            e.strerror = f"Permission denied: '{root.name}'"
-            raise e
+        except PermissionError:
+            raise
 
     def _get_extensionless_dst(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
@@ -350,7 +350,7 @@ class FileOrganizer:
         max_attempts = self._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
         padding = len(str(max_attempts))
         for n in range(1, max_attempts):
-            new_path = new_path.with_stem(f"{stem}_{n:0{padding}}")
+            new_path = path.with_stem(f"{stem}_{n:0{padding}}")
             if not new_path.exists():
                 return new_path
 
