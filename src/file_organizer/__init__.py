@@ -116,7 +116,7 @@ class FileOrganizer:
     ) -> None:
         unique_dst_dirs = {self.FALLBACK_DIR_NAME, *destination_dirs}
 
-        validated_map = {}
+        validated_map: dict[str, str] = {}
         for ext, dst in extensions_map.items():
             if not (sanitized_ext := self._sanitize_file_extension(ext)):
                 msg = f"Sanitized file extension '{ext}' is empty, skipping."
@@ -225,14 +225,14 @@ class FileOrganizer:
 
     def _compile_signature_patterns(
             self,
-            signature_patterns: Mapping[str, str] | None,
             validated_extensions: Collection[str],
+            signature_patterns: Mapping[str, str],
     ) -> tuple[re.Pattern[bytes], MappingProxyType[str, str]] | None:
         if not signature_patterns:
             return None
 
-        pattern_groups = []
-        pattern_name_map = {}
+        pattern_groups: list[str] = []
+        pattern_name_map: dict[str, str] = {}
 
         encoding = self.CONFIG_FILE_ENCODING
         # `ext` has to be an existing key in `normalized_map`
