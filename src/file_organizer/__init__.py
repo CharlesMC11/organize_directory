@@ -316,15 +316,26 @@ class FileOrganizer:
         """
 
         if (dst := self._try_move(src, dst)) is None:
-            return
+            return None, None
 
-        elif (src_sidecar := src.with_suffix(".xmp")).exists():
-            dst_sidecar = dst.with_suffix(".xmp")
-            try:
-                # Overwrite existing sidecars in a destination dir
-                src_sidecar.rename(dst_sidecar)
-            except OSError as e:
-                logger.warning(f"Failed to move: '{src_sidecar.name}': {e}")
+        src_sidecar = src.with_suffix(".xmp")
+        dst_sidecar = dst.with_suffix(".xmp")
+        try:
+            # Overwrite existing sidecars in a destination dir
+            return dst, src_sidecar.replace(dst_sidecar)
+        except FileNotFoundError as e:
+            logger.warning(f"Sidecar file not found for '{src.name}': {e}")
+        except OSError as e:
+            max_attempts = 3
+
+            for _ in range(max_attempts):
+                try:
+                    return dst, src_sidecar.replace(dst_sidecar)
+                except OSError:
+                    sleep(0.3)
+
+            logger.warning(f"Failed to move: '{src_sidecar.name}': {e}")
+        return dst, None
 
     def _try_move(self, src: Path, dst: Path) -> Path | None:
         """Attempt to move `src` to a unique `dst` path.
@@ -357,11 +368,10 @@ class FileOrganizer:
             max_attempts = 3
 
             for _ in range(max_attempts):
-                sleep(0.5)
                 try:
                     return src.rename(dst)
                 except OSError:
-                    continue
+                    sleep(0.5)
 
             logger.warning(f"Failed to move '{src.name}' after 3 retries: {e}")
 
