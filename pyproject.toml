@@ -1,6 +1,6 @@
 [project]
 name = "file-organizer"
-version = "2.0.110"
+version = "2.0.111"
 description = "A script originally intended to organize my Downloads folder."
 authors = [{ name = "Charles Mesa Cayobit", email = "charlesmesacayobit@gmail.com" }]
 readme = "README.md"

@@ -32,8 +32,10 @@ class FileOrganizer:
 
     # Class attributes
 
-    FALLBACK_DIR_NAME: Final = "Misc"
     CONFIG_FILE_ENCODING: Final = "utf-8"
+
+    FALLBACK_DIR_NAME: Final = "Misc"
+
     SIGNATURE_READ_SIZE: Final = 32
 
     # Private class attributes
@@ -41,7 +43,9 @@ class FileOrganizer:
     _CONFIG_REQUIRED_FIELDS: Final = frozenset(
         {"destination_dirs", "extensions_map"}
     )
+
     _GROUP_PATTERN_NAME_SANITIZER: Final = re.compile(r"\W")
+
     _IGNORED_FILES: Final = frozenset({".DS_Store", ".localized"})
 
     _TRANSIENT_ERRORS: Final = frozenset(
@@ -49,6 +53,8 @@ class FileOrganizer:
     )
     _MAX_MOVE_RETRIES: Final = 3
     _RETRY_DELAY: Final = 0.5
+
+    _MAX_PATH_COLLISION_RESOLUTIONS: Final = 99
 
     # Class methods
 
