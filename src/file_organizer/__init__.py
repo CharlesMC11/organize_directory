@@ -116,10 +116,10 @@ class FileOrganizer:
     # Magic methods
 
     def __init__(
-            self,
-            destination_dirs: Collection[str],
-            extensions_map: Mapping[str, str],
-            signature_patterns: Mapping[str, str] | None = None,
+        self,
+        destination_dirs: Collection[str],
+        extensions_map: Mapping[str, str],
+        signature_patterns: Mapping[str, str] | None = None,
     ) -> None:
         unique_dst_dirs = {self.FALLBACK_DIR_NAME, *destination_dirs}
 
@@ -144,9 +144,9 @@ class FileOrganizer:
 
         self.signature_patterns = None
         if signature_patterns and (
-                patterns := self._compile_signature_patterns(
-                    validated_map.keys(), signature_patterns
-                )
+            patterns := self._compile_signature_patterns(
+                validated_map.keys(), signature_patterns
+            )
         ):
             self.signature_patterns, self._pattern_map = patterns
 
@@ -193,7 +193,7 @@ class FileOrganizer:
     @classmethod
     @contextmanager
     def _read_validated_config(
-            cls, file: Path
+        cls, file: Path
     ) -> Generator[TextIO, None, None]:
         try:
             with file.open("r", encoding=cls.CONFIG_FILE_ENCODING) as f:
@@ -219,9 +219,9 @@ class FileOrganizer:
         return ""
 
     def _compile_signature_patterns(
-            self,
-            validated_extensions: Collection[str],
-            signature_patterns: Mapping[str, str],
+        self,
+        validated_extensions: Collection[str],
+        signature_patterns: Mapping[str, str],
     ) -> tuple[re.Pattern[bytes], MappingProxyType[str, str]] | None:
         """Compile file signature patterns into one bytes pattern"""
 
@@ -337,7 +337,7 @@ class FileOrganizer:
         return self.extensions_map.get(file_ext, self.FALLBACK_DIR_NAME)
 
     def _move_file_and_sidecar(
-            self, src: Path, dst_dir: Path
+        self, src: Path, dst_dir: Path
     ) -> tuple[Path | None, Path | None]:
         """Move `src` and, if it exists, its sidecar into `dst_dir`.
 
@@ -393,7 +393,7 @@ class FileOrganizer:
 
     @staticmethod
     def _retry_move_into(
-            src: Path, dst_dir: Path, error: OSError
+        src: Path, dst_dir: Path, error: OSError
     ) -> Path | None:
         """Retry to move `src` into `dst_dir` after the caller raises an OSError.
 
@@ -422,7 +422,7 @@ class FileOrganizer:
 
     @staticmethod
     def _generate_unique_destination_path(
-            path: Path,
+        path: Path,
     ) -> Generator[Path, None, None]:
         stem = path.stem
         padding = len(str(FileOrganizer._MAX_PATH_COLLISION_RESOLUTIONS))
