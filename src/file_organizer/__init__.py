@@ -166,10 +166,6 @@ class FileOrganizer:
                     else:
                         _, xmp = self._move_file_and_sidecar(entry, dst_path)
 
-        for xmp_file in xmp_files:
-            if xmp_file.exists():
-                dst_path = root / self.FALLBACK_DIR_NAME / xmp_file.name
-                self._try_move(xmp_file, dst_path)
                         if xmp is not None:
                             moved_xmp_files.add(xmp.name)
 
