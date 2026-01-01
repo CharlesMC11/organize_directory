@@ -235,7 +235,7 @@ class FileOrganizer:
             )
             try:
                 unescaped_pattern.encode("latin-1")
-            except (UnicodeError, re.error):
+            except UnicodeError, re.error:
                 logger.warning(f"Invalid pattern '{pattern}', skipping.")
                 continue
 
@@ -267,7 +267,7 @@ class FileOrganizer:
         try:
             for dst in self.destination_dirs:
                 (root / dst).mkdir(parents=True, exist_ok=True)
-        except (PermissionError, OSError):
+        except PermissionError, OSError:
             raise
 
     def _determine_dst(self, entry: Path) -> str | None:
