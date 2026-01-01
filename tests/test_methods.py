@@ -147,3 +147,16 @@ def test__safely_move(organizer, tmp_path):
     dst_dir.chmod(0o755)
     result = organizer._try_move_into(f, dst_dir)
     assert result == dst_dir / f.name
+
+
+def test__generate_unique_destination_path(organizer, tmp_path):
+    dst_dir = tmp_path / "dst"
+    dst_dir.mkdir()
+
+    dst = dst_dir / "file.txt"
+    dst.write_text("Hello, World!")
+
+    new_path = next(organizer._generate_unique_destination_path(dst))
+    padding = len(str(organizer._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS))
+
+    assert new_path.stem == f"file_{1:0{padding}}"

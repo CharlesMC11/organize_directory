@@ -380,10 +380,9 @@ class FileOrganizer:
             path: Path,
     ) -> Generator[Path, None, None]:
         stem = path.stem
-        ext = path.suffix
         padding = len(
             str(FileOrganizer._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS)
         )
 
         for n in count(1):
-            yield path.with_name(f"{stem}_{n:0{padding}}{ext}")
+            yield path.with_stem(f"{stem}_{n:0{padding}}")
