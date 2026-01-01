@@ -209,8 +209,8 @@ class FileOrganizer:
         """
 
         if missing := FileOrganizer._CONFIG_REQUIRED_FIELDS - frozenset(keys):
-            message = "Missing required sections: " + ", ".join(missing)
-            raise MissingRequiredFieldsError(message)
+            msg = "Missing required sections: " + ", ".join(missing)
+            raise MissingRequiredFieldsError(msg)
 
     @staticmethod
     def _sanitize_file_extension(ext: str) -> str:
