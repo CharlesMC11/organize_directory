@@ -341,37 +341,23 @@ class FileOrganizer:
         """
 
         try:
-            dst = self._get_unique_destination_path(dst)
             return src.rename(dst)
-        except NamingAttemptsExceededError as e:
-            msg = f"Failed to create a unique name for '{src.name}': {e}"
+        except FileExistsError:
+            max_attempts = self._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
+            padding = len(str(max_attempts))
+            stem = dst.stem
+            ext = dst.suffix
+
+            for n in range(1, max_attempts + 1):
+                new_dst = dst.with_name(f"{stem}_{n:0{padding}}{ext}")
+                try:
+                    return src.rename(new_dst)
+                except FileExistsError:
+                    continue
+
+            msg = f"Failed to create a unique name for '{src.name}' after {max_attempts} attempts."
             logger.warning(msg)
             return None
         except OSError as e:
             logger.warning(f"Failed to move '{src.name}': {e}")
             return None
-
-    @staticmethod
-    def _get_unique_destination_path(path: Path) -> Path:
-        """Generate a unique destination path.
-
-        :param path: a destination path to saved to
-        :return: a guaranteed unique path
-        :raises NamingAttemptsExceededError: if no unique path can be generated with the attempted limit
-        """
-
-        if not path.exists():
-            return path
-
-        stem = path.stem
-        max_attempts = FileOrganizer._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
-        padding = len(str(max_attempts))
-        for n in range(1, max_attempts):
-            new_path = path.with_stem(f"{stem}_{n:0{padding}}")
-            if not new_path.exists():
-                return new_path
-
-        raise NamingAttemptsExceededError(
-            f"Could not create a unique filename for {path.name} "
-            f"after {max_attempts:,} attempts"
-        )
