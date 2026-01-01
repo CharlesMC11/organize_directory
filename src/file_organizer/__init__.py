@@ -1,5 +1,6 @@
 """Class for organizing files and directories."""
 
+import errno
 import json
 import logging
 import re
@@ -42,7 +43,10 @@ class FileOrganizer:
     )
     _GROUP_PATTERN_NAME_SANITIZER: Final = re.compile(r"\W")
     _IGNORED_FILES: Final = frozenset({".DS_Store", ".localized"})
-    _MAX_PATH_COLLISION_RESOLUTIONS: Final = 99
+
+    _TRANSIENT_ERRORS: Final = frozenset(
+        {errno.EAGAIN, errno.EBUSY, errno.ETIMEDOUT}
+    )
     _MAX_MOVE_RETRIES: Final = 3
     _RETRY_DELAY: Final = 0.5
 
@@ -388,6 +392,10 @@ class FileOrganizer:
         :param dst_dir: the destination dir’s path
         :return: the final destination path if the move succeeds, `None` if all attempts fail
         """
+
+        if error.errno not in FileOrganizer._TRANSIENT_ERRORS:
+            logger.warning(f"Non-transient error: {error}")
+            return None
 
         max_attempts = FileOrganizer._MAX_MOVE_RETRIES
 
