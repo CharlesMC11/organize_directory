@@ -171,10 +171,10 @@ class FileOrganizer:
                         if xmp is not None:
                             moved_xmp_files.add(xmp.name)
 
+        xmp_dst = root / self.FALLBACK_DIR_NAME
         for xmp in xmp_files:
             if not xmp.name in moved_xmp_files:
-                dst_path = root / self.FALLBACK_DIR_NAME / xmp.name
-                self._try_move_into(xmp, dst_path)
+                self._try_move_into(xmp, xmp_dst)
             else:
                 logger.info(xmp.name + " has already been moved")
 
