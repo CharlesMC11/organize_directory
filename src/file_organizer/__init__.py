@@ -324,43 +324,44 @@ class FileOrganizer:
         return self.extensions_map.get(file_ext, self.FALLBACK_DIR_NAME)
 
     def _move_file_and_sidecar(
-            self, src: Path, dst: Path
+            self, src: Path, dst_dir: Path
     ) -> tuple[Path | None, Path | None]:
-        """Move a file and, if it exists, its sidecar from `src` into `dst`.
+        """Move `src` and, if it exists, its sidecar into `dst_dir`.
 
         A sidecar file is moved only if its main file is moved successfully.
         If moving the sidecar file fails, the process continues.
 
         :param src: the source file’s full path
-        :param dst: the destination’s full path
+        :param dst_dir: the destination’s full path
+        :return: a tuple containing the final destination paths of the `src` and its sidecar
         """
 
-        if (dst := self._try_move_into(src, dst)) is None:
+        if (dst_dir := self._try_move_into(src, dst_dir)) is None:
             return None, None
 
         src_sidecar = src.with_suffix(".xmp")
-        dst_sidecar = dst.with_suffix(".xmp")
+        dst_sidecar = dst_dir.with_suffix(".xmp")
         try:
             # Overwrite existing sidecars in a destination dir
-            return dst, src_sidecar.replace(dst_sidecar)
+            return dst_dir, src_sidecar.replace(dst_sidecar)
         except FileNotFoundError as e:
             logger.warning(f"Sidecar file not found for '{src.name}': {e}")
         except OSError as e:
-            return dst, self._retry_move_into(src, dst, e)
-        return dst, None
+            return dst_dir, self._retry_move_into(src, dst_dir, e)
+        return dst_dir, None
 
-    def _try_move_into(self, src: Path, dst: Path) -> Path | None:
-        """Attempt to move `src` to a unique `dst` path.
+    def _try_move_into(self, src: Path, dst_dir: Path) -> Path | None:
+        """Attempt to move `src` into `dst_dir`.
 
-        :param src: the source file’s full path
-        :param dst: the destination’s full path
-        :return: the final destination path if the move succeeds, `None` if an OSError is raised
+        :param src: the source’s path
+        :param dst_dir: the destination dir’s path
+        :return: the final destination path if the move succeeds, `None` if a PermissionError is raised
         """
 
         try:
-            return src.move_into(dst)
+            return src.move_into(dst_dir)
         except FileExistsError:
-            dst_generator = self._generate_unique_destination_path(dst)
+            dst_generator = self._generate_unique_destination_path(dst_dir)
             max_attempts = self._MAX_PATH_COLLISION_RESOLUTIONS
 
             for dst_path in islice(dst_generator, max_attempts):
@@ -375,17 +376,26 @@ class FileOrganizer:
             logger.error(f"Permission denied for '{src.name}': {e}")
         except OSError as e:
             # Retry if the OS temporarily locks the file
-            return self._retry_move_into(src, dst, e)
+            return self._retry_move_into(src, dst_dir, e)
 
     @staticmethod
-    def _retry_move_into(src: Path, dst: Path, error: OSError) -> Path | None:
+    def _retry_move_into(
+            src: Path, dst_dir: Path, error: OSError
+    ) -> Path | None:
+        """Retry to move `src` into `dst_dir` after the caller raises an OSError.
+
+        :param src: the source’s path
+        :param dst_dir: the destination dir’s path
+        :return: the final destination path if the move succeeds, `None` if all attempts fail
+        """
+
         max_attempts = FileOrganizer._MAX_MOVE_RETRIES
 
         for n in range(max_attempts):
             msg = f"Retrying to move '{src.name}' (attempt {n + 1}/{max_attempts})"
             logger.info(msg)
             try:
-                return src.move_into(dst)
+                return src.move_into(dst_dir)
             except OSError:
                 sleep(FileOrganizer._RETRY_DELAY)
 
