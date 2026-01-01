@@ -331,7 +331,8 @@ class FileOrganizer:
         if not (match := self.signature_patterns.match(header)):
             return self.FALLBACK_DIR_NAME
 
-        if not (file_ext := self._pattern_map.get(match.lastgroup)):
+        group_name = match.lastgroup or ""
+        if not (file_ext := self._pattern_map.get(group_name)):
             return self.FALLBACK_DIR_NAME
 
         return self.extensions_map.get(file_ext, self.FALLBACK_DIR_NAME)
