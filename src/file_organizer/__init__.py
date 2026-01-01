@@ -273,7 +273,7 @@ class FileOrganizer:
     def _determine_dst(self, entry: Path) -> str | None:
         """Determine the destination directory for the given directory entry."""
 
-        match entry.info:
+        match entry:
             case _ if entry.name in self._IGNORED_FILES or entry.is_symlink():
                 return None
 
