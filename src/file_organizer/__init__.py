@@ -129,16 +129,16 @@ class FileOrganizer:
             else:
                 logger.warning(f"{dst} not in `destination_dirs`, ignoring.")
 
-        patterns = self._compile_signature_patterns(
-            signature_patterns, validated_map.keys()
-        )
-
         self.destination_dirs: Final = frozenset(unique_dst_dirs)
         self.extensions_map: Final = MappingProxyType(validated_map)
-        try:
+
+        self.signature_patterns = None
+        if signature_patterns and (
+                patterns := self._compile_signature_patterns(
+                    validated_map.keys(), signature_patterns
+                )
+        ):
             self.signature_patterns, self._pattern_map = patterns
-        except TypeError:
-            self.signature_patterns = None
 
     # Public methods
 
