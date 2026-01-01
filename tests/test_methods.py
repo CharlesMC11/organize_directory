@@ -24,6 +24,7 @@ zip = PK\x03\x04
 jpeg = images
 png = images
 dng = images_raw
+cfg = programming
 py = python
 sh = shell
 zip = archives
