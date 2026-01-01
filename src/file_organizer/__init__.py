@@ -278,7 +278,7 @@ class FileOrganizer:
         try:
             for dst in self.destination_dirs:
                 (root / dst).mkdir(parents=True, exist_ok=True)
-        except PermissionError:
+        except (PermissionError, OSError):
             raise
 
     def _get_extensionless_dst(self, file: Path) -> str:
