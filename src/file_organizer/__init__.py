@@ -160,7 +160,7 @@ class FileOrganizer:
                     xmp_files.append(entry)
 
                 case dst_dir:
-                    dst_path = root / dst_dir / entry.name
+                    dst_path = root / dst_dir
 
                     if entry.is_dir():
                         self._try_move_into(entry, dst_path)
