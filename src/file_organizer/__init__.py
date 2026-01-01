@@ -47,7 +47,7 @@ class FileOrganizer:
     )
     _GROUP_PATTERN_NAME_SANITIZER: Final = re.compile(r"\W")
     _IGNORED_FILES: Final = frozenset({".DS_Store", ".localized"})
-    _MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS: Final = 1_000
+    _MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS: Final = 99
 
     # Class methods
 
