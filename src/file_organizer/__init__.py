@@ -228,8 +228,7 @@ class FileOrganizer:
             validated_extensions: Collection[str],
             signature_patterns: Mapping[str, str],
     ) -> tuple[re.Pattern[bytes], MappingProxyType[str, str]] | None:
-        if not signature_patterns:
-            return None
+        """Compile file signature patterns into one bytes pattern"""
 
         pattern_groups: list[str] = []
         pattern_name_map: dict[str, str] = {}
@@ -242,9 +241,8 @@ class FileOrganizer:
                 logger.warning(msg)
                 continue
             elif sanitized_ext not in validated_extensions:
-                logger.warning(
-                    f"{sanitized_ext} not in `extensions_map`, ignoring."
-                )
+                msg = f"{sanitized_ext} not in `extensions_map`, ignoring."
+                logger.warning(msg)
                 continue
 
             unescaped_pattern = pattern.encode(encoding).decode(
