@@ -2,7 +2,6 @@
 
 import json
 import logging
-import os
 import re
 from collections.abc import Collection, Generator, Mapping
 from configparser import ConfigParser
@@ -374,9 +373,9 @@ class FileOrganizer:
             dst_generator = self._generate_unique_destination_path(dst)
             max_attempts = self._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
 
-            for dst in islice(dst_generator, max_attempts):
+            for dst_path in islice(dst_generator, max_attempts):
                 try:
-                    return src.rename(dst)
+                    return src.move(dst_path)
                 except FileExistsError:
                     continue
 
