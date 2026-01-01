@@ -1,4 +1,4 @@
-import shutil
+import os.path
 from zipfile import ZipFile
 
 import pytest
@@ -38,7 +38,50 @@ def organizer(tmp_path):
     return FileOrganizer.from_ini(conf)
 
 
-def test_get_extensionless_dst(organizer, tmp_path):
+def test__determine_dst(organizer, tmp_path):
+    organizer._create_destination_dirs(tmp_path)
+
+    s = tmp_path / "s"
+    s.symlink_to(os.path.expanduser("~/Desktop/untitled"))
+
+    d = tmp_path / "d"
+    d.mkdir()
+
+    f = tmp_path / "f"
+    os.mkfifo(f)
+
+    x = tmp_path / "x.xmp"
+    x.write_text("Some xmp")
+
+    e = tmp_path / "e"
+    e.write_text('#!/usr/bin/env python\nprint("Hello, World!")\n')
+
+    p = tmp_path / "p.py"
+    p.write_text("#!/usr/bin/env python\nprint('Hello, World!')\n")
+
+    r = tmp_path / "h.dng"
+    r.write_bytes(b"Some raw photo")
+
+    paths = {
+        s.name: None,
+        d.name: organizer.FALLBACK_DIR_NAME,
+        f.name: None,
+        x.name: "DEFER",
+        e.name: organizer.extensions_map[".py"],
+        p.name: organizer.extensions_map[".py"],
+        r.name: organizer.extensions_map[".dng"],
+        **{k: None for k in organizer.destination_dirs},
+        "conf.cfg": organizer.extensions_map[".cfg"],
+    }
+
+    for entry in tmp_path.iterdir():
+        dst = organizer._determine_dst(entry)
+        result = paths[entry.name]
+
+        assert result is dst if not result else result == dst
+
+
+def test__get_extensionless_dst(organizer, tmp_path):
     png = tmp_path / "png"
     png.write_bytes(b"\x89PNG")
     png_target = organizer._get_extensionless_dst(png)
@@ -121,20 +164,7 @@ def test__move_file_and_sidecar(organizer, tmp_path):
             assert (xmp_target / "xmp.xmp").exists()
 
 
-def test__get_unique_destination_path(organizer, tmp_path):
-    dst_dir = tmp_path / "dst"
-    dst_dir.mkdir()
-
-    dst = dst_dir / "file.txt"
-    dst.write_text("Hello, World!")
-
-    new_path = next(organizer._generate_unique_destination_path(dst))
-    padding = len(str(organizer._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS))
-
-    assert new_path.stem == f"file_{1:0{padding}}"
-
-
-def test__safely_move(organizer, tmp_path):
+def test__try_move(organizer, tmp_path):
     dst_dir = tmp_path / "dst"
     dst_dir.mkdir(mode=0o000)
 

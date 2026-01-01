@@ -148,46 +148,38 @@ class FileOrganizer:
 
         # `move_file_and_sidecar()` will move a file’s existing sidecar alongside it, so defer processing the rest XMP files to the end.
         xmp_files: list[Path] = []
+        moved_xmp_files: set[str] = set()
 
-        with os.scandir(root) as it:
-            for entry in it:
-                if entry.name in self._IGNORED_FILES or entry.is_symlink():
+        for entry in root.iterdir():
+            match self._determine_dst(entry):
+                case None:
                     continue
 
-                elif entry.is_dir():
-                    if entry.name.endswith("download"):
-                        continue
-                    elif entry.name not in self.destination_dirs:
-                        dst_path = root / self.FALLBACK_DIR_NAME / entry.name
-                        self._try_move(Path(entry.path), dst_path)
-                    continue
+                case "DEFER":
+                    xmp_files.append(entry)
 
-                elif not entry.is_file():
-                    continue
+                case dst_dir:
+                    dst_path = root / dst_dir / entry.name
 
-                file = Path(entry.path)
-                file_ext = file.suffix.lower()
-                if file_ext == ".xmp":
-                    xmp_files.append(file)
-                    continue
+                    if entry.is_dir():
+                        self._try_move_into(entry, dst_path)
 
-                dst_dir = (
-                    self._get_extensionless_dst(file)
-                    if not file_ext
-                    else self.extensions_map.get(
-                        file_ext, self.FALLBACK_DIR_NAME
-                    )
-                )
-
-                dst_path = root / dst_dir / file.name
-                self._move_file_and_sidecar(file, dst_path)
+                    else:
+                        _, xmp = self._move_file_and_sidecar(entry, dst_path)
 
         for xmp_file in xmp_files:
             if xmp_file.exists():
                 dst_path = root / self.FALLBACK_DIR_NAME / xmp_file.name
                 self._try_move(xmp_file, dst_path)
+                        if xmp is not None:
+                            moved_xmp_files.add(xmp.name)
+
+        for xmp in xmp_files:
+            if not xmp.name in moved_xmp_files:
+                dst_path = root / self.FALLBACK_DIR_NAME / xmp.name
+                self._try_move_into(xmp, dst_path)
             else:
-                logger.info(xmp_file.name + " has already been moved")
+                logger.info(xmp.name + " has already been moved")
 
     # Private methods
 
@@ -280,6 +272,35 @@ class FileOrganizer:
                 (root / dst).mkdir(parents=True, exist_ok=True)
         except (PermissionError, OSError):
             raise
+
+    def _determine_dst(self, entry: Path) -> str | None:
+        """Determine the destination directory for the given directory entry."""
+
+        match entry.info:
+            case _ if entry.name in self._IGNORED_FILES or entry.is_symlink():
+                return None
+
+            case _ if entry.is_dir() and (
+                    entry.name in self.destination_dirs
+                    or entry.name.endswith("download")
+            ):
+                return None
+
+            case _ if not (entry.is_dir() or entry.is_file()):
+                return None
+
+        match entry.suffix:
+            case ".xmp":
+                return "DEFER"
+
+            case "":
+                return self._get_extensionless_dst(entry)
+
+            case ext if dst := self.extensions_map.get(ext):
+                return dst
+
+            case _:
+                return self.FALLBACK_DIR_NAME
 
     def _get_extensionless_dst(self, file: Path) -> str:
         """Get the target directory for a file without an extension."""
