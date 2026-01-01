@@ -7,6 +7,7 @@ import re
 from collections.abc import Collection, Generator, Mapping
 from configparser import ConfigParser
 from contextlib import contextmanager
+from itertools import count, islice
 from pathlib import Path
 from time import sleep
 from types import MappingProxyType
@@ -24,10 +25,6 @@ class InvalidConfigError(FileOrganizerError, ValueError):
 
 class MissingRequiredFieldsError(InvalidConfigError):
     """Raised when required fields in a config file are missing."""
-
-
-class NamingAttemptsExceededError(FileOrganizerError):
-    """Raised when a unique filename cannot be generated."""
 
 
 class FileOrganizer:
@@ -340,15 +337,12 @@ class FileOrganizer:
         try:
             return src.rename(dst)
         except FileExistsError:
+            dst_generator = self._generate_unique_destination_path(dst)
             max_attempts = self._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
-            padding = len(str(max_attempts))
-            stem = dst.stem
-            ext = dst.suffix
 
-            for n in range(1, max_attempts + 1):
-                new_dst = dst.with_name(f"{stem}_{n:0{padding}}{ext}")
+            for dst in islice(dst_generator, max_attempts):
                 try:
-                    return src.rename(new_dst)
+                    return src.rename(dst)
                 except FileExistsError:
                     continue
 
@@ -370,4 +364,16 @@ class FileOrganizer:
                     continue
 
             logger.warning(f"Failed to move '{src.name}' after 3 retries: {e}")
-            return None
+
+    @staticmethod
+    def _generate_unique_destination_path(
+            path: Path,
+    ) -> Generator[Path, None, None]:
+        stem = path.stem
+        ext = path.suffix
+        padding = len(
+            str(FileOrganizer._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS)
+        )
+
+        for n in count(1):
+            yield path.with_name(f"{stem}_{n:0{padding}}{ext}")

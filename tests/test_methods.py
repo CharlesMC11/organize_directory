@@ -128,9 +128,10 @@ def test__get_unique_destination_path(organizer, tmp_path):
     dst = dst_dir / "file.txt"
     dst.write_text("Hello, World!")
 
-    new_path = organizer._get_unique_destination_path(dst)
+    new_path = next(organizer._generate_unique_destination_path(dst))
+    padding = len(str(organizer._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS))
 
-    assert len(new_path.stem) > len(dst.stem)
+    assert new_path.stem == f"file_{1:0{padding}}"
 
 
 def test__safely_move(organizer, tmp_path):
