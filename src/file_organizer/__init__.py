@@ -170,7 +170,7 @@ class FileOrganizer:
                     continue
 
                 file = Path(entry.path)
-                file_ext = file.suffix
+                file_ext = file.suffix.lower()
                 if file_ext == ".xmp":
                     xmp_files.append(file)
                     continue
