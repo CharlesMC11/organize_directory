@@ -67,7 +67,7 @@ def test_get_extensionless_dst(organizer, tmp_path):
     assert unknown_target == organizer.FALLBACK_DIR_NAME
 
 
-def test_move_file_and_sidecar(organizer, tmp_path):
+def test__move_file_and_sidecar(organizer, tmp_path):
     organizer._create_destination_dirs(tmp_path)
 
     img = tmp_path / "jpeg.jpeg"
@@ -98,8 +98,8 @@ def test_move_file_and_sidecar(organizer, tmp_path):
     assert img_target == tmp_path / "Images"
     assert raw_target == tmp_path / "Images/Raw"
 
-    organizer._move_file_and_sidecar(img, img_target / img.name)
-    organizer._move_file_and_sidecar(raw, raw_target / raw.name)
+    organizer._move_file_and_sidecar(img, img_target)
+    organizer._move_file_and_sidecar(raw, raw_target)
 
     assert (img_target / "jpeg.jpeg").exists()
     assert (img_target / "jpeg.xmp").exists()
@@ -112,7 +112,7 @@ def test_move_file_and_sidecar(organizer, tmp_path):
 
     for f in xmp, xmp2, xmp3:
         try:
-            shutil.move(f, xmp_target)
+            f.move_into(xmp_target)
 
         except FileNotFoundError:
             assert not f.exists()
@@ -141,9 +141,9 @@ def test__safely_move(organizer, tmp_path):
     f = tmp_path / "file.txt"
     f.write_text("Hello, World!")
 
-    result = organizer._try_move(f, dst_dir / f.name)
+    result = organizer._try_move_into(f, dst_dir)
     assert result is None
 
     dst_dir.chmod(0o755)
-    result = organizer._try_move(f, dst_dir / f.name)
+    result = organizer._try_move_into(f, dst_dir)
     assert result == dst_dir / f.name

@@ -317,7 +317,7 @@ class FileOrganizer:
         :param dst: the destination’s full path
         """
 
-        if (dst := self._try_move(src, dst)) is None:
+        if (dst := self._try_move_into(src, dst)) is None:
             return None, None
 
         src_sidecar = src.with_suffix(".xmp")
@@ -339,7 +339,7 @@ class FileOrganizer:
             logger.warning(f"Failed to move: '{src_sidecar.name}': {e}")
         return dst, None
 
-    def _try_move(self, src: Path, dst: Path) -> Path | None:
+    def _try_move_into(self, src: Path, dst: Path) -> Path | None:
         """Attempt to move `src` to a unique `dst` path.
 
         :param src: the source file’s full path
@@ -348,7 +348,7 @@ class FileOrganizer:
         """
 
         try:
-            return src.rename(dst)
+            return src.move_into(dst)
         except FileExistsError:
             dst_generator = self._generate_unique_destination_path(dst)
             max_attempts = self._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
@@ -369,7 +369,7 @@ class FileOrganizer:
 
             for _ in range(max_attempts):
                 try:
-                    return src.rename(dst)
+                    return src.move_into(dst)
                 except OSError:
                     sleep(0.5)
 
