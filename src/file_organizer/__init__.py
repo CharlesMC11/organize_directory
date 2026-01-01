@@ -391,6 +391,7 @@ class FileOrganizer:
         except OSError as e:
             # Retry if the OS temporarily locks the file
             return self._retry_move_into(src, dst_dir, e)
+        return None
 
     @staticmethod
     def _retry_move_into(
