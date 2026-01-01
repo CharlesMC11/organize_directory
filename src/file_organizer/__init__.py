@@ -42,7 +42,7 @@ class FileOrganizer:
     )
     _GROUP_PATTERN_NAME_SANITIZER: Final = re.compile(r"\W")
     _IGNORED_FILES: Final = frozenset({".DS_Store", ".localized"})
-    _MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS: Final = 99
+    _MAX_PATH_COLLISION_RESOLUTIONS: Final = 99
     _MAX_MOVE_RETRIES: Final = 3
     _RETRY_DELAY: Final = 0.5
 
@@ -361,7 +361,7 @@ class FileOrganizer:
             return src.move_into(dst)
         except FileExistsError:
             dst_generator = self._generate_unique_destination_path(dst)
-            max_attempts = self._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS
+            max_attempts = self._MAX_PATH_COLLISION_RESOLUTIONS
 
             for dst_path in islice(dst_generator, max_attempts):
                 try:
@@ -398,9 +398,7 @@ class FileOrganizer:
             path: Path,
     ) -> Generator[Path, None, None]:
         stem = path.stem
-        padding = len(
-            str(FileOrganizer._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS)
-        )
+        padding = len(str(FileOrganizer._MAX_PATH_COLLISION_RESOLUTIONS))
 
         for n in count(1):
             yield path.with_stem(f"{stem}_{n:0{padding}}")

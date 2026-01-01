@@ -188,6 +188,6 @@ def test__generate_unique_destination_path(organizer, tmp_path):
     dst.write_text("Hello, World!")
 
     new_path = next(organizer._generate_unique_destination_path(dst))
-    padding = len(str(organizer._MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS))
+    padding = len(str(organizer._MAX_PATH_COLLISION_RESOLUTIONS))
 
     assert new_path.stem == f"file_{1:0{padding}}"
