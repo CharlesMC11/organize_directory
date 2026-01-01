@@ -305,7 +305,9 @@ class FileOrganizer:
 
         return self.extensions_map.get(file_ext, self.FALLBACK_DIR_NAME)
 
-    def _move_file_and_sidecar(self, src: Path, dst: Path) -> None:
+    def _move_file_and_sidecar(
+            self, src: Path, dst: Path
+    ) -> tuple[Path | None, Path | None]:
         """Move a file and, if it exists, its sidecar from `src` into `dst`.
 
         A sidecar file is moved only if its main file is moved successfully.
@@ -359,10 +361,8 @@ class FileOrganizer:
 
             msg = f"Failed to create a unique name for '{src.name}' after {max_attempts} attempts."
             logger.error(msg)
-            return None
         except PermissionError as e:
             logger.error(f"Permission denied for '{src.name}': {e}")
-            return None
         except OSError as e:
             # Retry if the OS temporarily locks the file
             max_attempts = 3
