@@ -247,11 +247,20 @@ class FileOrganizer:
                 )
                 continue
 
+            unescaped_pattern = pattern.encode(encoding).decode(
+                "unicode_escape"
+            )
+            try:
+                unescaped_pattern.encode("latin-1")
+            except (UnicodeError, re.error):
+                logger.warning(f"Invalid pattern '{pattern}', skipping.")
+                continue
+
             group_name = "g_" + self._GROUP_PATTERN_NAME_SANITIZER.sub(
                 "_", sanitized_ext
             )
             pattern_name_map[group_name] = sanitized_ext
-            pattern_groups.append(f"(?P<{group_name}>{unescaped_pattern})")
+            pattern_groups.append(f"(?P<{group_name}>(?>{unescaped_pattern}))")
 
         if not pattern_groups:
             return None
