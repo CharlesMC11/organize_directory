@@ -354,7 +354,7 @@ class FileOrganizer:
                     continue
 
             msg = f"Failed to create a unique name for '{src.name}' after {max_attempts} attempts."
-            logger.warning(msg)
+            logger.error(msg)
             return None
         except PermissionError as e:
             logger.error(f"Permission denied for '{src.name}': {e}")
