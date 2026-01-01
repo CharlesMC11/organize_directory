@@ -301,12 +301,10 @@ class FileOrganizer:
         if not header:
             return self.FALLBACK_DIR_NAME
 
-        match = self.signature_patterns.match(header)
-        if not match:
+        if not (match := self.signature_patterns.match(header)):
             return self.FALLBACK_DIR_NAME
 
-        file_ext = self._pattern_map.get(match.lastgroup)
-        if not file_ext:
+        if not (file_ext := self._pattern_map.get(match.lastgroup)):
             return self.FALLBACK_DIR_NAME
 
         return self.extensions_map.get(file_ext, self.FALLBACK_DIR_NAME)
