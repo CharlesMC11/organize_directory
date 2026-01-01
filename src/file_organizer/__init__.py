@@ -350,19 +350,19 @@ class FileOrganizer:
         :return: a tuple containing the final destination paths of the `src` and its sidecar
         """
 
-        if (dst_dir := self._try_move_into(src, dst_dir)) is None:
+        if (dst_path := self._try_move_into(src, dst_dir)) is None:
             return None, None
 
         src_sidecar = src.with_suffix(".xmp")
-        dst_sidecar = dst_dir.with_suffix(".xmp")
+        dst_sidecar = dst_path.with_suffix(".xmp")
         try:
             # Overwrite existing sidecars in a destination dir
-            return dst_dir, src_sidecar.replace(dst_sidecar)
+            return dst_path, src_sidecar.replace(dst_sidecar)
         except FileNotFoundError as e:
             logger.warning(f"Sidecar file not found for '{src.name}': {e}")
         except OSError as e:
-            return dst_dir, self._retry_move_into(src, dst_dir, e)
-        return dst_dir, None
+            return dst_path, self._retry_move_into(src, dst_dir, e)
+        return dst_path, None
 
     def _try_move_into(self, src: Path, dst_dir: Path) -> Path | None:
         """Attempt to move `src` into `dst_dir`.
