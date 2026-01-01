@@ -1,7 +1,5 @@
 """Class for organizing files and directories."""
 
-__author__ = "Charles Mesa Cayobit"
-
 import json
 import logging
 import os
@@ -10,6 +8,7 @@ from collections.abc import Collection, Generator, Mapping
 from configparser import ConfigParser
 from contextlib import contextmanager
 from pathlib import Path
+from time import sleep
 from types import MappingProxyType
 from typing import Final, TextIO
 
@@ -360,5 +359,15 @@ class FileOrganizer:
             logger.error(f"Permission denied for '{src.name}': {e}")
             return None
         except OSError as e:
-            logger.warning(f"Failed to move '{src.name}': {e}")
+            # Retry if the OS temporarily locks the file
+            max_attempts = 3
+
+            for _ in range(max_attempts):
+                sleep(0.5)
+                try:
+                    return src.rename(dst)
+                except OSError:
+                    continue
+
+            logger.warning(f"Failed to move '{src.name}' after 3 retries: {e}")
             return None
