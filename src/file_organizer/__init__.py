@@ -172,7 +172,7 @@ class FileOrganizer:
                 case dst_dir:
                     dst_path = root / dst_dir
 
-                    if entry.is_dir():
+                    if entry.info.is_dir():
                         self._try_move_into(entry, dst_path)
 
                     else:
@@ -283,17 +283,20 @@ class FileOrganizer:
     def _determine_dst(self, entry: Path) -> str | None:
         """Determine the destination directory for the given directory entry."""
 
-        match entry:
-            case _ if entry.name in self._IGNORED_FILES or entry.is_symlink():
+        match entry.info:
+            case _ if entry.name in self._IGNORED_FILES:
                 return None
 
-            case _ if entry.is_dir() and (
-                    entry.name in self.destination_dirs
-                    or entry.name.endswith("download")
+            case info if info.is_symlink():
+                return None
+
+            case info if info.is_dir() and (
+                entry.name in self.destination_dirs
+                or entry.name.endswith("download")
             ):
                 return None
 
-            case _ if not (entry.is_dir() or entry.is_file()):
+            case info if not (info.is_dir() or info.is_file()):
                 return None
 
         match entry.suffix:
