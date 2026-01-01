@@ -43,6 +43,8 @@ class FileOrganizer:
     _GROUP_PATTERN_NAME_SANITIZER: Final = re.compile(r"\W")
     _IGNORED_FILES: Final = frozenset({".DS_Store", ".localized"})
     _MAX_PATH_COLLISION_RESOLUTION_ATTEMPTS: Final = 99
+    _MAX_MOVE_RETRIES: Final = 3
+    _RETRY_DELAY: Final = 0.5
 
     # Class methods
 
@@ -344,15 +346,7 @@ class FileOrganizer:
         except FileNotFoundError as e:
             logger.warning(f"Sidecar file not found for '{src.name}': {e}")
         except OSError as e:
-            max_attempts = 3
-
-            for _ in range(max_attempts):
-                try:
-                    return dst, src_sidecar.replace(dst_sidecar)
-                except OSError:
-                    sleep(0.3)
-
-            logger.warning(f"Failed to move: '{src_sidecar.name}': {e}")
+            return dst, self._retry_move_into(src, dst, e)
         return dst, None
 
     def _try_move_into(self, src: Path, dst: Path) -> Path | None:
@@ -381,15 +375,23 @@ class FileOrganizer:
             logger.error(f"Permission denied for '{src.name}': {e}")
         except OSError as e:
             # Retry if the OS temporarily locks the file
-            max_attempts = 3
+            return self._retry_move_into(src, dst, e)
 
-            for _ in range(max_attempts):
-                try:
-                    return src.move_into(dst)
-                except OSError:
-                    sleep(0.5)
+    @staticmethod
+    def _retry_move_into(src: Path, dst: Path, error: OSError) -> Path | None:
+        max_attempts = FileOrganizer._MAX_MOVE_RETRIES
 
-            logger.warning(f"Failed to move '{src.name}' after 3 retries: {e}")
+        for n in range(max_attempts):
+            msg = f"Retrying to move '{src.name}' (attempt {n + 1}/{max_attempts})"
+            logger.info(msg)
+            try:
+                return src.move_into(dst)
+            except OSError:
+                sleep(FileOrganizer._RETRY_DELAY)
+
+        msg = f"Failed to move '{src.name}' after {max_attempts} retries: {error}"
+        logger.warning(msg)
+        return None
 
     @staticmethod
     def _generate_unique_destination_path(
