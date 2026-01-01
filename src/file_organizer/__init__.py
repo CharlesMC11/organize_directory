@@ -163,12 +163,12 @@ class FileOrganizer:
                 elif not entry.is_file():
                     continue
 
-                if entry.name.endswith(".xmp"):
+                file = Path(entry.path)
+                file_ext = file.suffix
+                if file_ext == ".xmp":
                     xmp_files.append(file)
                     continue
 
-                file = Path(entry.path)
-                file_ext = file.suffix
                 dst_dir = (
                     self._get_extensionless_dst(file)
                     if not file_ext
