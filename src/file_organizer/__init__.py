@@ -227,12 +227,14 @@ class FileOrganizer:
     ) -> tuple[re.Pattern[bytes], MappingProxyType[str, str]] | None:
         """Compile file signature patterns into one bytes pattern"""
 
-        pattern_groups: list[str] = []
-        pattern_name_map: dict[str, str] = {}
+        target_encoding = "latin-1"
+
+        groups: list[str] = []
+        name_map: dict[str, str] = {}
 
         encoding = self.CONFIG_FILE_ENCODING
         # `ext` has to be an existing key in `normalized_map`
-        for ext, pattern in signature_patterns.items():
+        for ext, raw_pattern in signature_patterns.items():
             if not (sanitized_ext := self._sanitize_file_extension(ext)):
                 msg = f"Sanitized file extension '{ext}' is empty, skipping."
                 logger.warning(msg)
@@ -242,30 +244,29 @@ class FileOrganizer:
                 logger.warning(msg)
                 continue
 
-            unescaped_pattern = pattern.encode(encoding).decode(
-                "unicode_escape"
-            )
             try:
-                unescaped_pattern.encode("latin-1")
+                unescaped = raw_pattern.encode(encoding).decode(
+                    "unicode_escape"
+                )
+                unescaped.encode(target_encoding)
+
+                group_name = f"g_{
+                    self._GROUP_PATTERN_NAME_SANITIZER.sub('_', sanitized_ext)
+                }"
+                name_map[group_name] = sanitized_ext
+                groups.append(f"(?P<{group_name}>(?>{unescaped}))")
             except UnicodeError, re.error:
-                logger.warning(f"Invalid pattern '{pattern}', skipping.")
+                msg = f"Invalid pattern '{raw_pattern}' for '{sanitized_ext}', skipping."
+                logger.warning(msg)
                 continue
 
-            group_name = "g_" + self._GROUP_PATTERN_NAME_SANITIZER.sub(
-                "_", sanitized_ext
-            )
-            pattern_name_map[group_name] = sanitized_ext
-            pattern_groups.append(f"(?P<{group_name}>(?>{unescaped_pattern}))")
-
-        if not pattern_groups:
+        if not groups:
             return None
 
-        combined_pattern = "|".join(pattern_groups)
-        compiled_pattern = re.compile(
-            combined_pattern.encode("latin-1"), re.NOFLAG
-        )
+        combined = "|".join(groups)
+        compiled = re.compile(combined.encode(target_encoding), re.NOFLAG)
 
-        return compiled_pattern, MappingProxyType(pattern_name_map)
+        return compiled, MappingProxyType(name_map)
 
     def _create_destination_dirs(self, root: Path) -> None:
         """Create the `destination_dirs`.
