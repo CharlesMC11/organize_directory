@@ -188,7 +188,8 @@ class FileOrganizer:
             if not xmp.name in moved_xmp_files:
                 self._try_move_into(xmp, xmp_dst)
             else:
-                logger.info(xmp.name + " has already been moved")
+                msg = f"'{xmp.name}' has already been moved as a sidecar."
+                logger.info(msg)
 
     # Private methods
 
@@ -211,13 +212,13 @@ class FileOrganizer:
         """
 
         if missing := FileOrganizer._CONFIG_REQUIRED_FIELDS - frozenset(keys):
-            msg = "Missing required sections: " + ", ".join(missing)
+            msg = f"Missing required sections: {', '.join(missing)}"
             raise MissingRequiredFieldsError(msg)
 
     @staticmethod
     def _sanitize_file_extension(ext: str) -> str:
         if ext := ext.strip(" .").lower():
-            return "." + ext
+            return f".{ext}"
         return ""
 
     def _compile_signature_patterns(
