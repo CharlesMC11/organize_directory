@@ -48,6 +48,8 @@ class FileOrganizer:
 
     _IGNORED_FILES: Final = frozenset({".DS_Store", ".localized"})
 
+    _SIGNAL_DEFER: Final = "DEFER"
+
     _TRANSIENT_ERRORS: Final = frozenset(
         {errno.EAGAIN, errno.EBUSY, errno.ETIMEDOUT}
     )
@@ -301,7 +303,7 @@ class FileOrganizer:
 
         match entry.suffix:
             case ".xmp":
-                return "DEFER"
+                return FileOrganizer._SIGNAL_DEFER
 
             case "":
                 return self._get_extensionless_dst(entry)
