@@ -515,19 +515,23 @@ class FileOrganizer:
         if (dst_path := self._try_move_into(src, dst_dir)) is None:
             return None, None
 
-        src_sidecar: Final = src.with_suffix(".xmp")
-        dst_sidecar: Final = dst_path.with_suffix(".xmp")
+        src_sidecar = ext = None
+        for ext in _SIDECAR_EXTENSIONS:
+            src_sidecar = src.with_suffix(ext)
+            if src_sidecar.info.exists():
+                break
+
+        if src_sidecar is None or ext is None:
+            logger.info(f"'{src.name}' does not have a sidecar file.")
+            return dst_path, None
+
+        dst_sidecar: Final = dst_path.with_suffix(ext)
         try:
             # Overwrite existing sidecars in a destination
             return dst_path, src_sidecar.replace(dst_sidecar)
 
-        except FileNotFoundError as e:
-            logger.warning(f"Sidecar file not found for '{src.name}': {e}")
-
         except OSError as e:
             return dst_path, self._retry_move_into(src, dst_dir, e)
-
-        return dst_path, None
 
     def _try_move_into(self, src: Path, dst_dir: Path) -> Path | None:
         """Attempt to move `src` into `dst_dir`.
