@@ -12,18 +12,18 @@ def test_init():
 
     organizer = FileOrganizer(destination_dirs, extensions_map)
 
-    assert "Python" in organizer.destination_dirs
-    assert ".PY" not in organizer.extensions_map
-    assert organizer.extensions_map.get(".PY") is None
-    assert organizer.extensions_map.get(".py") == "Python"
+    assert "Python" in organizer.destination_dir_names
+    assert ".PY" not in organizer.extension_to_dir
+    assert organizer.extension_to_dir.get(".PY") is None
+    assert organizer.extension_to_dir.get(".py") == "Python"
 
-    assert organizer.signature_patterns is None
+    assert organizer.signature_pattern_re is None
 
     organizer = FileOrganizer(
         destination_dirs, extensions_map, signature_patterns
     )
 
-    assert b"#!/.+?python" in organizer.signature_patterns.pattern
+    assert b"#!/.+?python" in organizer.signature_pattern_re.pattern
 
 
 def test_from_ini(tmp_path):
@@ -47,15 +47,15 @@ def test_from_ini(tmp_path):
     conf.write_text(ini)
     organizer = FileOrganizer.from_ini(conf)
 
-    assert organizer.signature_patterns is None
+    assert organizer.signature_pattern_re is None
 
     conf = Path(__file__).with_name("extensions_map.ini")
     organizer = FileOrganizer.from_ini(conf)
 
-    assert "Programming/Python" in organizer.destination_dirs
-    assert b"#!/.+?python" in organizer.signature_patterns.pattern
-    assert b"\x89PNG" in organizer.signature_patterns.pattern
-    assert "Programming/Python" == organizer.extensions_map[".py"]
+    assert "Programming/Python" in organizer.destination_dir_names
+    assert b"#!/.+?python" in organizer.signature_pattern_re.pattern
+    assert b"\x89PNG" in organizer.signature_pattern_re.pattern
+    assert "Programming/Python" == organizer.extension_to_dir[".py"]
 
 
 def test_from_json(tmp_path):
@@ -73,6 +73,6 @@ def test_from_json(tmp_path):
     conf = Path(__file__).with_name("extensions_map.json")
     organizer = FileOrganizer.from_json(conf)
 
-    assert "Programming/Python" in organizer.destination_dirs
-    assert b"#!/.+?python" in organizer.signature_patterns.pattern
-    assert "Programming/Python" in organizer.extensions_map[".py"]
+    assert "Programming/Python" in organizer.destination_dir_names
+    assert b"#!/.+?python" in organizer.signature_pattern_re.pattern
+    assert "Programming/Python" in organizer.extension_to_dir[".py"]

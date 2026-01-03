@@ -68,11 +68,11 @@ def test__determine_dst(organizer, tmp_path):
         d.name: organizer.FALLBACK_DIR_NAME,
         f.name: None,
         x.name: "DEFER",
-        e.name: organizer.extensions_map[".py"],
-        p.name: organizer.extensions_map[".py"],
-        r.name: organizer.extensions_map[".dng"],
-        **{k: None for k in organizer.destination_dirs},
-        "conf.cfg": organizer.extensions_map[".cfg"],
+        e.name: organizer.extension_to_dir[".py"],
+        p.name: organizer.extension_to_dir[".py"],
+        r.name: organizer.extension_to_dir[".dng"],
+        **{k: None for k in organizer.destination_dir_names},
+        "conf.cfg": organizer.extension_to_dir[".cfg"],
     }
 
     for entry in tmp_path.iterdir():
@@ -104,10 +104,10 @@ def test__get_extensionless_dst(organizer, tmp_path):
     unknown.write_text("Some unknown file")
     unknown_target = organizer._get_extensionless_dst(unknown)
 
-    assert png_target == organizer.extensions_map[".png"]
-    assert python_target == organizer.extensions_map[".py"]
-    assert bash_target == organizer.extensions_map[".sh"]
-    assert zipfile_target == organizer.extensions_map[".zip"]
+    assert png_target == organizer.extension_to_dir[".png"]
+    assert python_target == organizer.extension_to_dir[".py"]
+    assert bash_target == organizer.extension_to_dir[".sh"]
+    assert zipfile_target == organizer.extension_to_dir[".zip"]
     assert unknown_target == organizer.FALLBACK_DIR_NAME
 
 
@@ -129,13 +129,13 @@ def test__move_file_and_sidecar(organizer, tmp_path):
     xmp3 = tmp_path / "xmp.xmp"
     xmp3.write_text("Some dangling xmp file")
 
-    img_target = tmp_path / organizer.extensions_map.get(
+    img_target = tmp_path / organizer.extension_to_dir.get(
         img.suffix, organizer.FALLBACK_DIR_NAME
     )
-    raw_target = tmp_path / organizer.extensions_map.get(
+    raw_target = tmp_path / organizer.extension_to_dir.get(
         raw.suffix, organizer.FALLBACK_DIR_NAME
     )
-    xmp_target = tmp_path / organizer.extensions_map.get(
+    xmp_target = tmp_path / organizer.extension_to_dir.get(
         xmp3.suffix, organizer.FALLBACK_DIR_NAME
     )
 
@@ -188,6 +188,6 @@ def test__generate_unique_destination_path(organizer, tmp_path):
     dst.write_text("Hello, World!")
 
     new_path = next(organizer._generate_unique_destination_path(dst))
-    padding = len(str(organizer._MAX_PATH_COLLISION_RESOLUTIONS))
+    padding = len(str(organizer.max_collision_attempts))
 
     assert new_path.stem == f"file_{1:0{padding}}"
