@@ -38,9 +38,6 @@ _IGNORED_FILENAMES: Final = frozenset({".DS_Store", ".localized"})
 _SIDECAR_EXTENSIONS: Final = frozenset({".aae", ".xmp"})
 """Extensions used by sidecar files."""
 
-_DEFER_SIGNAL: Final = "DEFER"
-"""Internal signal used to flag sidecar files to be processed at the end."""
-
 _TRANSIENT_ERRNO_CODES: Final = frozenset(
     {errno.EAGAIN, errno.EBUSY, errno.ETIMEDOUT}
 )
