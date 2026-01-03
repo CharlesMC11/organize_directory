@@ -101,7 +101,7 @@ class FileOrganizer:
     check for binary signatures.
     """
 
-    FALLBACK_DIR_NAME: Final = "MISC"
+    FALLBACK_DIR_NAME: Final = "Misc"
     """The default directory used when a directory or file does not match any
     rule.
     """
