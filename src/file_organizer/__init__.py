@@ -431,7 +431,8 @@ class FileOrganizer:
                 extension or binary signature.
         """
 
-        if entry.name in _IGNORED_FILENAMES:
+        name: Final = entry.name
+        if name in _IGNORED_NAMES:
             return None
 
         ext: Final = entry.suffix.lower()
@@ -442,13 +443,12 @@ class FileOrganizer:
         if info.is_symlink():
             return None
 
-        elif info.is_dir() and (
-            entry.name in self.destination_dir_names
-            or entry.name.endswith("download")
-        ):
-            return None
+        elif info.is_dir():
+            if name in self.destination_dir_names or name.endswith("download"):
+                return None
+            return self.FALLBACK_DIR_NAME
 
-        elif not (info.is_dir() or info.is_file()):
+        elif not info.is_file():
             return None
 
         elif not entry.suffix:
