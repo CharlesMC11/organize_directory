@@ -237,14 +237,6 @@ class FileOrganizer:
         Move directories and files into subdirectories based on their file
         extensions or binary signatures.
 
-        Dangling sidecar files are captured by deferring their movement to the
-        end. When the first for loop encounters a sidecar file, the sidecar is
-        added into the set `found_sidecars`. However, sidecar files with parent
-        files are moved alongside their parent—these files are added into
-        another set, `moved_sidecars`. When the last for loop processes each
-        sidecar in `found_sidecars`, each file is checked against
-        `moved_sidecars`, only moving those that are not in `moved_sidecars`.
-
         Args:
             root_dir (Path): The directory to organize.
 
@@ -255,37 +247,17 @@ class FileOrganizer:
 
         self._create_destination_dirs(root_dir)
 
-        # Defer handling of sidecar files to the end by adding all encountered
-        # sidecar files into `found_sidecars`. For sidecar files moved alongside
-        # their parent files, add them to `moved_sidecars` to check against
-        # later.
-        found_sidecars: set[Path] = set()
-        moved_sidecars: set[str] = set()
-
         for entry in root_dir.iterdir():
-            dst_dir = self._determine_dst(entry)
-
-            if not dst_dir:
-                continue
-
-            elif dst_dir == _DEFER_SIGNAL:
-                found_sidecars.add(entry)
-                continue
-
-            dst_path = root_dir / dst_dir
-            if entry.info.is_dir():
-                self._try_move_into(entry, dst_path)
-            else:
-                _, sidecar = self._move_file_and_sidecar(entry, dst_path)
-                if sidecar:
-                    moved_sidecars.add(sidecar.name)
+            self._process_dir_entry(entry, root_dir)
 
         sidecar_dst: Final = root_dir / self.FALLBACK_DIR_NAME
-        for sidecar in found_sidecars:
-            if sidecar.name not in moved_sidecars:
-                self._try_move_into(sidecar, sidecar_dst)
+        for entry in root_dir.iterdir():
+            if entry.info.is_file() and entry.suffix in _SIDECAR_EXTENSIONS:
+                self._try_move_into(entry, sidecar_dst)
+
             else:
-                msg = f"'{sidecar.name}' has already been moved with its parent."
+                msg = f"'{entry.name}' has already been moved with its "
+                msg += "parent."
                 logger.info(msg)
 
     # Private methods
@@ -432,6 +404,24 @@ class FileOrganizer:
 
         except (PermissionError, OSError):
             raise
+
+    def _process_dir_entry(self, entry: Path, root_dir: Path) -> None:
+        """Process a directory entry and move it to the destination directory.
+
+        Args:
+            entry: The directory entry to be processed.
+            root_dir: The source directory containing the entry.
+        """
+
+        if not (dst_dir := self._determine_dst(entry)):
+            return
+
+        dst_path = root_dir / dst_dir
+        if entry.info.is_dir():
+            self._try_move_into(entry, dst_path)
+
+        else:
+            self._move_file_and_sidecar(entry, dst_path)
 
     def _determine_dst(self, entry: Path) -> str | None:
         """Determine the destination directory for the given directory or file.
