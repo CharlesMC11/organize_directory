@@ -487,7 +487,7 @@ class FileOrganizer:
         if not header:
             return self.FALLBACK_DIR_NAME
 
-        if not (match := self.signature_pattern_re.match(header)):
+        elif not (match := self.signature_pattern_re.match(header)):
             return self.FALLBACK_DIR_NAME
 
         group_name: Final = match.lastgroup or ""
