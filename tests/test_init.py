@@ -4,6 +4,8 @@ import pytest
 
 from file_organizer import FileOrganizer, MissingRequiredFieldsError
 
+# TODO: More tests
+
 
 def test_init():
     destination_dirs = {"Python"}

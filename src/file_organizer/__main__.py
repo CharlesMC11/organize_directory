@@ -17,10 +17,12 @@ def main() -> None:
     handler = logging.StreamHandler()
     logger.addHandler(handler)
 
+    # TODO: Add dry-run mode
     parser = ArgumentParser(prog="File Organizer", description=__doc__)
     parser.add_argument("dir", type=Path, help="the directory to organize")
     args = parser.parse_args()
 
+    # FIXME: Don’t hardcode this here
     targets_file = Path(__file__).parents[2] / "extensions_map.ini"
 
     organizer = FileOrganizer.from_ini(targets_file)

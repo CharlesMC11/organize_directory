@@ -38,6 +38,7 @@ _IGNORED_NAMES: Final = frozenset({".DS_Store", ".localized"})
 _SIDECAR_EXTENSIONS: Final = frozenset({".aae", ".xmp"})
 """Extensions used by sidecar files."""
 
+# TODO: Determine all transient errors
 _TRANSIENT_ERRNO_CODES: Final = frozenset(
     {errno.EAGAIN, errno.EBUSY, errno.ETIMEDOUT}
 )
@@ -61,6 +62,10 @@ class MissingRequiredFieldsError(FileOrganizerError):
     """Raised when required fields in a configuration file are missing."""
 
 
+# TODO: Add dry-run mode
+# TODO: Add history
+# TODO: Better log messages
+# TODO: Add undo functionality?
 class FileOrganizer:
     """Manages file organization based on extension and binary signature maps.
 
@@ -105,6 +110,7 @@ class FileOrganizer:
 
     # Class methods
 
+    # FIXME: Handle KeyError
     @classmethod
     def from_ini(cls, config_path: Path) -> FileOrganizer:
         """Initialize the organizer using an INI configuration file.
@@ -141,6 +147,7 @@ class FileOrganizer:
 
         return cls(destination_dirs, extensions_map, signature_patterns)
 
+    # FIXME: Handle missing keys better
     @classmethod
     def from_json(cls, config_path: Path) -> FileOrganizer:
         """Initialize the organizer using an JSON configuration file.
@@ -538,6 +545,7 @@ class FileOrganizer:
         except OSError as e:
             return dst_path, self._retry_move_into(src, dst_dir, e)
 
+    # TODO: Determine if pathlib.Path.move_into() is cross-drive safe in Windows
     def _try_move_into(self, src: Path, dst_dir: Path) -> Path | None:
         """Attempt to move `src` into `dst_dir`.
 

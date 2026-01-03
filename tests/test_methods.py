@@ -5,6 +5,8 @@ import pytest
 
 from file_organizer import FileOrganizer
 
+# TODO: More tests
+
 TEST_CONFIG = r"""
 [destination_dirs]
 archives = Archives
