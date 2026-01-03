@@ -249,13 +249,18 @@ class FileOrganizer:
 
         sidecar_dst: Final = root_dir / self.FALLBACK_DIR_NAME
         for entry in root_dir.iterdir():
-            if entry.info.is_file() and entry.suffix in _SIDECAR_EXTENSIONS:
-                self._try_move_into(entry, sidecar_dst)
+            if entry.name in _IGNORED_NAMES:
+                continue
 
-            else:
-                msg = f"'{entry.name}' has already been moved with its "
-                msg += "parent."
-                logger.info(msg)
+            info = entry.info
+            if info.is_symlink():
+                continue
+
+            elif not info.is_file():
+                continue
+
+            elif entry.suffix.lower() in _SIDECAR_EXTENSIONS:
+                self._try_move_into(entry, sidecar_dst)
 
     # Private methods
 
