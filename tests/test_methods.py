@@ -67,7 +67,7 @@ def test__determine_dst(organizer, tmp_path):
         s.name: None,
         d.name: organizer.FALLBACK_DIR_NAME,
         f.name: None,
-        x.name: "DEFER",
+        x.name: None,
         e.name: organizer.extension_to_dir[".py"],
         p.name: organizer.extension_to_dir[".py"],
         r.name: organizer.extension_to_dir[".dng"],

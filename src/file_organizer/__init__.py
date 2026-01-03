@@ -35,6 +35,9 @@ _REQUIRED_CONFIG_KEYS: Final = frozenset(
 _IGNORED_FILENAMES: Final = frozenset({".DS_Store", ".localized"})
 """Files the organizer should skip entirely."""
 
+_SIDECAR_EXTENSIONS: Final = frozenset({".aae", ".xmp"})
+"""Extensions used by sidecar files."""
+
 _DEFER_SIGNAL: Final = "DEFER"
 """Internal signal used to flag sidecar files to be processed at the end."""
 
@@ -437,12 +440,15 @@ class FileOrganizer:
             entry: The directory or file whose destination needs to be determined.
 
         Returns:
-            `None` if the entry should not be moved, a defer signal if the entry
-                is a sidecar file, or the directory name based on its file
+            `None` if the entry should not be moved, or the directory name based on its file
                 extension or binary signature.
         """
 
         if entry.name in _IGNORED_FILENAMES:
+            return None
+
+        ext: Final = entry.suffix.lower()
+        if ext in _SIDECAR_EXTENSIONS:
             return None
 
         info: Final = entry.info
@@ -458,13 +464,10 @@ class FileOrganizer:
         elif not (info.is_dir() or info.is_file()):
             return None
 
-        elif entry.suffix == ".xmp":
-            return _DEFER_SIGNAL
-
         elif not entry.suffix:
             return self._get_extensionless_dst(entry)
 
-        elif dst := self.extension_to_dir.get(entry.suffix):
+        elif dst := self.extension_to_dir.get(ext):
             return dst
 
         return self.FALLBACK_DIR_NAME
