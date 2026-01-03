@@ -25,9 +25,7 @@ from typing import Final, TextIO
 CONFIG_ENCODING: Final = "utf-8"
 """File encoding used for configuration files."""
 
-_REQUIRED_CONFIG_KEYS: Final = frozenset(
-    {"destination_dirs", "extensions_map"}
-)
+_REQUIRED_CONFIG_KEYS: Final = frozenset({"destination_dirs", "extensions_map"})
 """Keys that must be defined in configuration files to prevent a
 `MissingRequiredFieldsError`.
 """
@@ -70,13 +68,14 @@ class FileOrganizer:
     """Manages file organization based on extension and binary signature maps.
 
     The organizer processes a root directory, identifying files based on their
-    extension or, if extensionless, the first 32 bytes of their binary signatures.
+    extension or, if extensionless, the first 32 bytes of their binary
+    signatures.
 
     Attributes:
-        SIGNATURE_READ_SIZE (int): The number of bytes read from an extensionless
-            file’s header.
-        FALLBACK_DIR_NAME (str): The fallback directory when a file isn’t mapped to a
-            specified directory.
+        SIGNATURE_READ_SIZE (int): The number of bytes read from an
+            extensionless file’s header.
+        FALLBACK_DIR_NAME (str): The fallback directory when a file isn’t mapped
+          to a specified directory.
 
         destination_dir_names (frozenset[str]): Directories the files will be
             moved into.
@@ -210,7 +209,8 @@ class FileOrganizer:
             # `dst` has be an existing entry in `unique_dst_dirs`
             if dst in unique_dst_dirs:
                 if sanitized_ext in validated_map:
-                    msg = f"{sanitized_ext} already exists in {validated_map}, updating value."
+                    msg = f"{sanitized_ext} already exists in {validated_map}, "
+                    msg += "updating value."
                     logger.warning(msg)
                 validated_map[sanitized_ext] = dst
             else:
@@ -296,7 +296,8 @@ class FileOrganizer:
         """Validate the required fields of a config file.
 
         Raises:
-            MissingRequiredFieldsError: If any of the required fields are missing.
+            MissingRequiredFieldsError: If any of the required fields are
+                missing.
         """
 
         if missing := _REQUIRED_CONFIG_KEYS - frozenset(keys):
@@ -379,7 +380,8 @@ class FileOrganizer:
                 groups.append(f"(?P<{group_name}>(?>{unescaped}))")
 
             except (UnicodeError, re.error):
-                msg = f"Invalid pattern '{raw_pattern}' for '{sanitized_ext}', skipping."
+                msg = f"Invalid pattern '{raw_pattern}' for '{sanitized_ext}', "
+                msg += "skipping."
                 logger.warning(msg)
                 continue
 
@@ -436,11 +438,12 @@ class FileOrganizer:
         """Determine the destination directory for the given directory or file.
 
         Args:
-            entry: The directory or file whose destination needs to be determined.
+            entry: The directory or file whose destination needs to be
+                determined.
 
         Returns:
-            `None` if the entry should not be moved, or the directory name based on its file
-                extension or binary signature.
+            `None` if the entry should not be moved, or the directory name based
+                on its file extension or binary signature.
         """
 
         name: Final = entry.name
@@ -554,7 +557,8 @@ class FileOrganizer:
             dst_dir: The destination directory’s path
 
         Returns:
-            The final destination path if moving `src` succeeds, `None` otherwise.
+            The final destination path if moving `src` succeeds, `None`
+                otherwise.
         """
 
         try:
@@ -588,7 +592,7 @@ class FileOrganizer:
     def _retry_move_into(
         self, src: Path, dst_dir: Path, error: OSError
     ) -> Path | None:
-        """Retry to move `src` into `dst_dir` after the caller raises an OSError.
+        """Retry moving `src` into `dst_dir` after the caller raises an OSError.
 
         Args:
             src: The full path of a file or directory to move.
