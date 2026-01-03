@@ -32,7 +32,7 @@ _REQUIRED_CONFIG_KEYS: Final = frozenset(
 `MissingRequiredFieldsError`.
 """
 
-_IGNORED_FILENAMES: Final = frozenset({".DS_Store", ".localized"})
+_IGNORED_NAMES: Final = frozenset({".DS_Store", ".localized"})
 """Files the organizer should skip entirely."""
 
 _SIDECAR_EXTENSIONS: Final = frozenset({".aae", ".xmp"})
