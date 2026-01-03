@@ -23,7 +23,10 @@ def test_init():
         destination_dirs, extensions_map, signature_patterns
     )
 
-    assert b"#!/.+?python" in organizer.signature_pattern_re.pattern
+    assert (
+        organizer.signature_pattern_re is not None
+        and b"#!/.+?python" in organizer.signature_pattern_re.pattern
+    )
 
 
 def test_from_ini(tmp_path):
@@ -53,7 +56,10 @@ def test_from_ini(tmp_path):
     organizer = FileOrganizer.from_ini(conf)
 
     assert "Programming/Python" in organizer.destination_dir_names
-    assert b"#!/.+?python" in organizer.signature_pattern_re.pattern
+    assert (
+        organizer.signature_pattern_re is not None
+        and b"#!/.+?python" in organizer.signature_pattern_re.pattern
+    )
     assert b"\x89PNG" in organizer.signature_pattern_re.pattern
     assert "Programming/Python" == organizer.extension_to_dir[".py"]
 
@@ -74,5 +80,8 @@ def test_from_json(tmp_path):
     organizer = FileOrganizer.from_json(conf)
 
     assert "Programming/Python" in organizer.destination_dir_names
-    assert b"#!/.+?python" in organizer.signature_pattern_re.pattern
+    assert (
+        organizer.signature_pattern_re is not None
+        and b"#!/.+?python" in organizer.signature_pattern_re.pattern
+    )
     assert "Programming/Python" in organizer.extension_to_dir[".py"]
