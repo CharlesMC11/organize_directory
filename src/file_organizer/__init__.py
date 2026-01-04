@@ -664,9 +664,8 @@ class FileOrganizer:
             )
             return self.DEFAULT_DIR_NAME
 
-        group_name: Final = match.lastgroup or ""
-        if not (ext := self._name_to_ext.get(group_name)):
-            return self.DEFAULT_DIR_NAME
+        assert match.lastgroup is not None, "Regex match found but `lastgroup` is `None`."
+        ext = self._name_to_ext[match.lastgroup]
 
         msg = f"{LogActions.IDENTIFIED}: '{file.name}' as '.{ext}' via binary signature."
         logger.info(msg)
