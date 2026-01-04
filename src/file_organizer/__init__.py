@@ -281,22 +281,22 @@ class FileOrganizer:
         validated_map: dict[str, str] = {}
         for ext, dst_dir in ext_to_dir.items():
             if not (sanitized_ext := self._sanitize_ext(ext)):
-                msg = (
-                    f"{LogActions.INIT}: Sanitized '{ext}' is empty, skipping."
-                )
+                msg = f"{LogActions.INIT}: Sanitized '{ext}' is empty, "
+                msg += "skipping."
                 logger.warning(msg)
                 continue
 
             # `dst_dir` has be an existing entry in `unique_dst_dirs`
             if dst_dir in unique_dir_names:
                 if sanitized_ext in validated_map:
-                    msg = f"{LogActions.INIT}: '{sanitized_ext}' already points to "
-                    msg += f"'{validated_map[sanitized_ext]}'. Updating to "
-                    msg += f"'{dst_dir}'."
+                    msg = f"{LogActions.INIT}: '{sanitized_ext}' already "
+                    msg += f"points to '{validated_map[sanitized_ext]}'. "
+                    msg += f"Updating to '{dst_dir}'."
                     logger.warning(msg)
                 validated_map[sanitized_ext] = dst_dir
             else:
-                msg = f"{LogActions.INIT}: '{dst_dir}' not in `dir_names`, skipping '{ext}'."
+                msg = f"{LogActions.INIT}: '{dst_dir}' not in `dir_names`, "
+                msg += "skipping."
                 logger.warning(msg)
 
         self.dir_names: Final = frozenset(unique_dir_names)
@@ -310,7 +310,8 @@ class FileOrganizer:
                 self.signatures_re = patterns[0]
                 self._name_to_ext: Final = patterns[1]
             else:
-                msg = f"{LogActions.INIT}: No valid binary signature regex provided."
+                msg = f"{LogActions.INIT}: No valid binary signature regex "
+                msg += "patterns provided."
                 logger.warning(msg)
         else:
             logger.info(
@@ -362,9 +363,8 @@ class FileOrganizer:
         sidecar_dst: Final = root_dir / self.DEFAULT_DIR_NAME
         for entry in root_dir.iterdir():
             if entry.name in _IGNORED_NAMES:
-                logger.debug(
-                    f"{LogActions.SKIPPED}: Ignored name '{entry.name}'."
-                )
+                msg = f"{LogActions.SKIPPED}: Ignored name '{entry.name}'."
+                logger.debug(msg)
                 continue
 
             info = entry.info
@@ -373,15 +373,16 @@ class FileOrganizer:
                 continue
 
             if not info.is_file():
-                logger.debug(
-                    f"{LogActions.SKIPPED}: Not a regular file '{entry.name}'."
-                )
+                msg = f"{LogActions.SKIPPED}: Not a regular file "
+                msg += f"'{entry.name}'."
+                logger.debug(msg)
                 continue
 
             if entry.suffix.lower() in _SIDECAR_EXTENSIONS:
                 self._move_to_dir(entry, sidecar_dst)
 
-        msg = f"{LogActions.FINISHED}: Processing items in '{root_dir.name}{FILE_SEP}'."
+        msg = f"{LogActions.FINISHED}: Processing items in '{root_dir.name}"
+        msg += f"{FILE_SEP}'."
         logger.info(msg)
 
     # Private methods
@@ -416,7 +417,8 @@ class FileOrganizer:
         """
 
         if missing := _REQUIRED_CONFIG_FIELDS - frozenset(fields):
-            msg = f"{LogActions.FAILED}: Missing config fields: {', '.join(missing)}."
+            msg = f"{LogActions.FAILED}: Missing config fields: "
+            msg += f"{', '.join(missing)}."
             raise MissingRequiredFieldsError(msg)
 
     @staticmethod
@@ -474,15 +476,14 @@ class FileOrganizer:
         # `ext` has to be an existing key in `normalized_map`
         for ext, raw_pattern in ext_to_re.items():
             if not (sanitized_ext := self._sanitize_ext(ext)):
-                msg = (
-                    f"{LogActions.INIT}: Sanitized '{ext}' is empty, skipping."
-                )
+                msg = f"{LogActions.INIT}: Sanitized '{ext}' is empty, "
+                msg += "skipping."
                 logger.warning(msg)
                 continue
 
             elif sanitized_ext not in validated_ext:
-                msg = f"{LogActions.INIT}: '{sanitized_ext}' not in `extensions_map`, "
-                msg += "skipping."
+                msg = f"{LogActions.INIT}: '{sanitized_ext}' not in "
+                msg += "`extensions_map`, skipping."
                 logger.warning(msg)
                 continue
 
@@ -528,7 +529,8 @@ class FileOrganizer:
             raise NotADirectoryError(msg)
 
         if self._dry_run:
-            msg = f"{LogActions.DRY_RUN}: Would create subdirectories in '{root_dir}{FILE_SEP}'."
+            msg = f"{LogActions.DRY_RUN}: Would create subdirectories in "
+            msg += f"'{root_dir.name}{FILE_SEP}'."
             logger.info(msg)
             return
 
@@ -558,16 +560,19 @@ class FileOrganizer:
         if entry.info.is_dir():
             d = self._move_to_dir(entry, dst_path)
             if not (self._dry_run or d is None):
-                msg = f"{LogActions.MOVED}: Directory '{d.name}' to '{dst_dir_name}{FILE_SEP}'."
+                msg = f"{LogActions.MOVED}: Directory '{d.name}' to "
+                msg += f"'{dst_dir_name}{FILE_SEP}'."
                 logger.info(msg)
 
         else:
             p, s = self._move_file_and_sidecar(entry, dst_path)
             if not (self._dry_run or p is None):
-                msg = f"{LogActions.MOVED}: File '{p.name}' to '{dst_dir_name}{FILE_SEP}'."
+                msg = f"{LogActions.MOVED}: File '{p.name}' to '{dst_dir_name}"
+                msg += f"{FILE_SEP}'."
                 logger.info(msg)
             if not (self._dry_run or s is None):
-                msg = f"{LogActions.MOVED}: Sidecar '{s.name}' to '{dst_dir_name}{FILE_SEP}'."
+                msg = f"{LogActions.MOVED}: Sidecar '{s.name}' to "
+                msg += f"'{dst_dir_name}{FILE_SEP}'."
                 logger.info(msg)
 
     def _get_dst_dir_name(self, entry: Path) -> str | None:
@@ -604,14 +609,13 @@ class FileOrganizer:
 
         if info.is_dir():
             if name in self.dir_names:
-                logger.debug(
-                    f"{LogActions.SKIPPED}: Destination directory '{name}{FILE_SEP}'."
-                )
+                msg = f"{LogActions.SKIPPED}: Target directory '{name}"
+                msg += f"{FILE_SEP}'."
+                logger.debug(msg)
                 return None
             if name.endswith("download"):
-                logger.debug(
-                    f"{LogActions.SKIPPED}: In-progress download '{name}'."
-                )
+                msg = f"{LogActions.SKIPPED}: In-progress download '{name}'."
+                logger.debug(msg)
                 return None
             return self.DEFAULT_DIR_NAME
 
@@ -639,9 +643,9 @@ class FileOrganizer:
         """
 
         if self.signatures_re is None:
-            logger.debug(
-                f"{LogActions.SKIPPED}: No regex signatures defined, returning default."
-            )
+            msg = f"{LogActions.SKIPPED}: No regex signatures defined, "
+            msg += "returning default."
+            logger.debug(msg)
             return self.DEFAULT_DIR_NAME
 
         try:
@@ -653,21 +657,23 @@ class FileOrganizer:
             return self.DEFAULT_DIR_NAME
 
         if not header:
-            logger.debug(
-                f"{LogActions.SKIPPED}: Empty file '{file.name}', returning default."
-            )
+            msg = f"{LogActions.SKIPPED}: Empty file '{file.name}', returning "
+            msg += "default."
+            logger.debug(msg)
             return self.DEFAULT_DIR_NAME
 
         if not (match := self.signatures_re.match(header)):
-            logger.debug(
-                f"{LogActions.SKIPPED}: No matching signature, returning default."
-            )
+            msg = f"{LogActions.SKIPPED}: No matching signature, returning "
+            msg += "default."
+            logger.debug(msg)
             return self.DEFAULT_DIR_NAME
 
-        assert match.lastgroup is not None, "Regex match found but `lastgroup` is `None`."
+        msg = "Regex match found but `lastgroup` is `None`."
+        assert match.lastgroup is not None, msg
         ext = self._name_to_ext[match.lastgroup]
 
-        msg = f"{LogActions.IDENTIFIED}: '{file.name}' as '.{ext}' via binary signature."
+        msg = f"{LogActions.IDENTIFIED}: '{file.name}' as '.{ext}' via binary "
+        msg += "signature."
         logger.info(msg)
         return self.ext_to_dir.get(ext, self.DEFAULT_DIR_NAME)
 
@@ -709,8 +715,8 @@ class FileOrganizer:
         sidecar_dst: Final = dst.with_suffix(ext)
 
         if self._dry_run:
-            msg = f"{LogActions.DRY_RUN}: Would move '{src_sidecar.name}' to '{dst_dir}"
-            msg += f"{FILE_SEP}'.'"
+            msg = f"{LogActions.DRY_RUN}: Would move '{src_sidecar.name}' to "
+            msg += f"'{dst_dir}{FILE_SEP}'.'"
             logger.info(msg)
             return dst, sidecar_dst
 
@@ -734,7 +740,8 @@ class FileOrganizer:
         """
 
         if self._dry_run:
-            msg = f"{LogActions.DRY_RUN}: Would move '{src.name}' to '{dst_dir}{FILE_SEP}'."
+            msg = f"{LogActions.DRY_RUN}: Would move '{src.name}' to '{dst_dir}"
+            msg += f"{FILE_SEP}'."
             logger.info(msg)
             return dst_dir / src.name
 
@@ -753,8 +760,8 @@ class FileOrganizer:
                 except FileExistsError:
                     continue
 
-            msg = f"{LogActions.FAILED}: Generating a unique path for '{src.name}' after "
-            msg += f"{self.max_collision_attempts} attempts."
+            msg = f"{LogActions.FAILED}: Generating a unique path for "
+            msg += f"'{src.name}' after {self.max_collision_attempts} attempts."
             logger.error(msg)
 
         except PermissionError as e:
@@ -790,8 +797,8 @@ class FileOrganizer:
         for n in range(self.max_move_retries):
             delay = self.retry_delay_seconds * (2**n)
 
-            msg = f"{LogActions.RETRYING} [{n + 1}/{self.max_move_retries}]: Moving "
-            msg += f"'{src.name}' in {delay:.2f} s."
+            msg = f"{LogActions.RETRYING} [{n + 1}/{self.max_move_retries}]: "
+            msg += f"Moving '{src.name}' in {delay:.2f} s."
             logger.info(msg)
             sleep(delay)
             try:
@@ -800,8 +807,8 @@ class FileOrganizer:
             except OSError:
                 continue
 
-        msg = f"{LogActions.FAILED}: Moving '{src.name}' after {self.max_move_retries} "
-        msg += f"retries: {error}"
+        msg = f"{LogActions.FAILED}: Moving '{src.name}' after "
+        msg += f"{self.max_move_retries} retries: {error}"
         logger.error(msg)
         return None
 
