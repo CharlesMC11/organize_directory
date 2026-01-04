@@ -468,14 +468,15 @@ class FileOrganizer:
         """
 
         name: Final = entry.name
+        ext: Final = entry.suffix.lower()
+        info: Final = entry.info
+
         if name in _IGNORED_NAMES:
             return None
 
-        ext: Final = entry.suffix.lower()
         if ext in _SIDECAR_EXTENSIONS:
             return None
 
-        info: Final = entry.info
         if info.is_symlink():
             return None
 
@@ -484,11 +485,11 @@ class FileOrganizer:
                 return None
             return self.DEFAULT_DIR_NAME
 
-        elif not info.is_file():
+        if not info.is_file():
             return None
 
-        elif not entry.suffix:
-            return self._get_extensionless_dst(entry)
+        if not ext:
+            return self._get_dst_dir_name_by_signature(entry)
 
         if dst_dir_name := self.ext_to_dir.get(ext):
             return dst_dir_name
