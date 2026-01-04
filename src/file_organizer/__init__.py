@@ -12,6 +12,7 @@ mappings.
 import errno
 import json
 import logging
+import os
 import re
 from collections.abc import Collection, Generator, Mapping
 from configparser import ConfigParser
@@ -25,7 +26,9 @@ from typing import Final, TextIO
 CONFIG_ENCODING: Final = "utf-8"
 """File encoding used for configuration files."""
 
-_REQUIRED_CONFIG_KEYS: Final = frozenset({"destination_dirs", "extensions_map"})
+_SEP: Final = os.sep
+
+_REQUIRED_CONFIG_FIELDS: Final = frozenset({"dir_names", "ext_to_dir"})
 """Keys that must be defined in configuration files to prevent a
 `MissingRequiredFieldsError`.
 """
@@ -215,8 +218,12 @@ class FileOrganizer:
                     msg = f"{sanitized_ext} already exists in {validated_map}, "
                     msg += "updating value."
                     logger.warning(msg)
-                validated_map[sanitized_ext] = dst
                 validated_map[sanitized_ext] = dst_dir
+            else:
+                msg = (
+                    f"INIT: '{dst_dir}' not in `dir_names`, skipping '{ext}'."
+                )
+                logger.warning(msg)
 
         self.dir_names: Final = frozenset(unique_dir_names)
         self.ext_to_dir: Final = MappingProxyType(validated_map)
@@ -229,20 +236,10 @@ class FileOrganizer:
                 self.signatures_re = patterns[0]
                 self._name_to_ext: Final = patterns[1]
             else:
-                logger.warning(
-                    f"{dst} not in `destination_dir_names`, ignoring."
-                )
-
-        self.destination_dir_names: Final = frozenset(unique_dst_dirs)
-        self.extension_to_dir: Final = MappingProxyType(validated_map)
-
-        self.signature_pattern_re = None
-        if signature_patterns_map:
-            if patterns := self._compile_signature_patterns(
-                validated_map.keys(), signature_patterns_map
-            ):
-                self.signature_pattern_re = patterns[0]
-                self._group_name_to_extension: Final = patterns[1]
+                msg = "INIT: No valid binary signature regex provided."
+                logger.warning(msg)
+        else:
+            logger.info("INIT: No binary signature regex provided.")
 
         self.max_move_retries: Final = max_move_retries or int(
             os.getenv("FO_MAX_MOVE_RETRIES", 3)
@@ -322,9 +319,8 @@ class FileOrganizer:
                 missing.
         """
 
-        if missing := _REQUIRED_CONFIG_KEYS - frozenset(keys):
-            msg = f"Missing required sections: {', '.join(missing)}"
         if missing := _REQUIRED_CONFIG_FIELDS - frozenset(fields):
+            msg = f"FAILED: Missing config fields: {', '.join(missing)}."
             raise MissingRequiredFieldsError(msg)
 
     @staticmethod
@@ -379,17 +375,15 @@ class FileOrganizer:
         name_to_ext: dict[str, str] = {}
 
         # `ext` has to be an existing key in `normalized_map`
-        for ext, raw_pattern in signature_patterns.items():
-            if not (sanitized_ext := self._sanitize_file_extension(ext)):
-                msg = f"Sanitized file extension '{ext}' is empty, skipping."
         for ext, raw_pattern in ext_to_re.items():
             if not (sanitized_ext := self._sanitize_ext(ext)):
+                msg = f"INIT: Sanitized '{ext}' is empty, skipping."
                 logger.warning(msg)
                 continue
 
-            elif sanitized_ext not in validated_extensions:
-                msg = f"{sanitized_ext} not in `extensions_map`, ignoring."
             elif sanitized_ext not in validated_ext:
+                msg = f"INIT: '{sanitized_ext}' not in `extensions_map`, "
+                msg += "skipping."
                 logger.warning(msg)
                 continue
 
@@ -399,11 +393,6 @@ class FileOrganizer:
                 )
                 unescaped.encode(target_encoding)
 
-                group_name = (
-                    f"g_{_PYTHON_IDENTIFIER_RE.sub('_', sanitized_ext)}"
-                )
-                name_map[group_name] = sanitized_ext
-                groups.append(f"(?P<{group_name}>(?>{unescaped}))")
                 name = f"g_{_PYTHON_IDENTIFIER_RE.sub('_', sanitized_ext)}"
                 name_to_ext[name] = sanitized_ext
                 groups.append(f"(?P<{name}>(?>{unescaped}))")
@@ -458,7 +447,10 @@ class FileOrganizer:
 
         dst_path = root_dir / dst_dir
         if entry.info.is_dir():
-            self._try_move_into(entry, dst_path)
+            d = self._move_to_dir(entry, dst_path)
+            if not (self._dry_run or d is None):
+                msg = f"MOVED: Directory '{d.name}' to '{dst_dir_name}{_SEP}'."
+                logger.info(msg)
 
         else:
             self._move_file_and_sidecar(entry, dst_path)
@@ -487,8 +479,7 @@ class FileOrganizer:
         if info.is_symlink():
             return None
 
-        elif info.is_dir():
-            if name in self.destination_dir_names or name.endswith("download"):
+        if info.is_dir():
             if name in self.dir_names or name.endswith("download"):
                 return None
             return self.DEFAULT_DIR_NAME
@@ -523,8 +514,7 @@ class FileOrganizer:
                 header: Final = f.read(self.SIGNATURE_READ_SIZE)
 
         except OSError as e:
-            logger.error(f"Could not open file '{file.name}': {e}")
-            return self.FALLBACK_DIR_NAME
+            logger.error(f"FAILED: Opening '{file.name}': {e}")
             return self.DEFAULT_DIR_NAME
 
         if not header:
@@ -534,12 +524,11 @@ class FileOrganizer:
             return self.DEFAULT_DIR_NAME
 
         group_name: Final = match.lastgroup or ""
-        if not (file_ext := self._group_name_to_extension.get(group_name)):
-            return self.FALLBACK_DIR_NAME
-        return self.extension_to_dir.get(file_ext, self.FALLBACK_DIR_NAME)
         if not (ext := self._name_to_ext.get(group_name)):
             return self.DEFAULT_DIR_NAME
 
+        msg = f"IDENTIFIED: '{file.name}' as '.{ext}' via binary signature."
+        logger.info(msg)
         return self.ext_to_dir.get(ext, self.DEFAULT_DIR_NAME)
 
     def _move_file_and_sidecar(
