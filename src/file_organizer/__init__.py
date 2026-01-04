@@ -793,11 +793,12 @@ class FileOrganizer:
             msg = f"{LogActions.RETRYING} [{n + 1}/{self.max_move_retries}]: Moving "
             msg += f"'{src.name}' in {delay:.2f} s."
             logger.info(msg)
+            sleep(delay)
             try:
                 return src.move_into(dst_dir)
 
             except OSError:
-                sleep(delay)
+                continue
 
         msg = f"{LogActions.FAILED}: Moving '{src.name}' after {self.max_move_retries} "
         msg += f"retries: {error}"
