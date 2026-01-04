@@ -27,6 +27,7 @@ CONFIG_ENCODING: Final = "utf-8"
 """File encoding used for configuration files."""
 
 _SEP: Final = os.sep
+"""Platform-dependent file separator."""
 
 _REQUIRED_CONFIG_FIELDS: Final = frozenset({"dir_names", "ext_to_dir"})
 """Keys that must be defined in configuration files to prevent a
@@ -63,9 +64,7 @@ class MissingRequiredFieldsError(FileOrganizerError):
     """Raised when required fields in a configuration file are missing."""
 
 
-# TODO: Add dry-run mode
 # TODO: Add history
-# TODO: Better log messages
 # TODO: Add undo functionality?
 class FileOrganizer:
     """Manages file organization based on extension and binary signature maps.
@@ -185,7 +184,9 @@ class FileOrganizer:
         if "ext_to_re" in content:
             ext_to_re = content["ext_to_re"]
 
-        return cls(destination_dirs, extensions_map, signature_patterns)
+        logger.info(f"CONFIG: Loaded rules from '{config_path.name}'.")
+
+        return cls(dir_names, ext_to_dir, ext_to_re)
 
     # Magic methods
 
@@ -215,14 +216,13 @@ class FileOrganizer:
             # `dst_dir` has be an existing entry in `unique_dst_dirs`
             if dst_dir in unique_dir_names:
                 if sanitized_ext in validated_map:
-                    msg = f"{sanitized_ext} already exists in {validated_map}, "
-                    msg += "updating value."
+                    msg = f"INIT: '{sanitized_ext}' already points to "
+                    msg += f"'{validated_map[sanitized_ext]}'. Updating to "
+                    msg += f"'{dst_dir}'."
                     logger.warning(msg)
                 validated_map[sanitized_ext] = dst_dir
             else:
-                msg = (
-                    f"INIT: '{dst_dir}' not in `dir_names`, skipping '{ext}'."
-                )
+                msg = f"INIT: '{dst_dir}' not in `dir_names`, skipping '{ext}'."
                 logger.warning(msg)
 
         self.dir_names: Final = frozenset(unique_dir_names)
@@ -268,25 +268,46 @@ class FileOrganizer:
             PermissionError | OSError: If `root_dir` cannot be accessed.
         """
 
-        self._create_destination_dirs(root_dir)
+        if self._dry_run:
+            logger.info("DRY-RUN: No changes will be made.")
+
+        else:
+            logger.info(f"STARTED: Organizing contents of '{root_dir.name}'.")
+            logger.debug("Creating subdirectories.")
+
+        self._create_dirs(root_dir)
+
+        if not self._dry_run:
+            logger.debug(f"Now processing entries in '{root_dir.name}'.")
 
         for entry in root_dir.iterdir():
             self._process_dir_entry(entry, root_dir)
 
-        sidecar_dst: Final = root_dir / self.FALLBACK_DIR_NAME
+        if not self._dry_run:
+            logger.info(f"ORGANIZED: Contents of '{root_dir.name}'.")
+            logger.debug("Now processing orphaned sidecar files.")
+
+        sidecar_dst: Final = root_dir / self.DEFAULT_DIR_NAME
         for entry in root_dir.iterdir():
             if entry.name in _IGNORED_NAMES:
+                logger.debug(f"SKIP: Ignored name '{entry.name}'.")
                 continue
 
             info = entry.info
             if info.is_symlink():
+                logger.debug(f"SKIP: Symlink '{entry.name}'.")
                 continue
 
-            elif not info.is_file():
+            if not info.is_file():
+                logger.debug(f"SKIP: Not a regular file '{entry.name}'.")
                 continue
 
-            elif entry.suffix.lower() in _SIDECAR_EXTENSIONS:
-                self._try_move_into(entry, sidecar_dst)
+            if entry.suffix.lower() in _SIDECAR_EXTENSIONS:
+                self._move_to_dir(entry, sidecar_dst)
+
+        if not self._dry_run:
+            msg = f"ORGANIZED: Orphaned sidecar files in '{root_dir.name}'."
+            logger.info(msg)
 
     # Private methods
 
@@ -398,8 +419,8 @@ class FileOrganizer:
                 groups.append(f"(?P<{name}>(?>{unescaped}))")
 
             except (UnicodeError, re.error):
-                msg = f"Invalid pattern '{raw_pattern}' for '{sanitized_ext}', "
-                msg += "skipping."
+                msg = f"INIT: Invalid pattern '{raw_pattern}' for "
+                msg += f"'{sanitized_ext}', skipping."
                 logger.warning(msg)
                 continue
 
@@ -425,7 +446,13 @@ class FileOrganizer:
         """
 
         if not root_dir.info.is_dir():
-            raise NotADirectoryError(f"Not a directory: '{root_dir.name}'")
+            msg = f"FAILED: Not a directory '{root_dir.name}'."
+            raise NotADirectoryError(msg)
+
+        if self._dry_run:
+            msg = f"DRY-RUN: Would create subdirectories in '{root_dir}{_SEP}'."
+            logger.info(msg)
+            return
 
         try:
             for dst in self.dir_names:
@@ -433,6 +460,8 @@ class FileOrganizer:
 
         except (PermissionError, OSError):
             raise
+
+        logger.info(f"CREATED: Subdirectories in '{root_dir.name}'.")
 
     def _process_dir_entry(self, entry: Path, root_dir: Path) -> None:
         """Process a directory entry and move it to the destination directory.
@@ -445,7 +474,7 @@ class FileOrganizer:
         if not (dst_dir_name := self._get_dst_dir_name(entry)):
             return
 
-        dst_path = root_dir / dst_dir
+        dst_path = root_dir / dst_dir_name
         if entry.info.is_dir():
             d = self._move_to_dir(entry, dst_path)
             if not (self._dry_run or d is None):
@@ -453,7 +482,13 @@ class FileOrganizer:
                 logger.info(msg)
 
         else:
-            self._move_file_and_sidecar(entry, dst_path)
+            p, s = self._move_file_and_sidecar(entry, dst_path)
+            if not (self._dry_run or p is None):
+                msg = f"MOVED: File '{p.name}' to '{dst_dir_name}{_SEP}'."
+                logger.info(msg)
+            if not (self._dry_run or s is None):
+                msg = f"MOVED: Sidecar '{s.name}' to '{dst_dir_name}{_SEP}'."
+                logger.info(msg)
 
     def _get_dst_dir_name(self, entry: Path) -> str | None:
         """Determine the destination directory for the given directory or file.
@@ -562,10 +597,17 @@ class FileOrganizer:
                 break
 
         if src_sidecar is None or ext is None:
-            logger.info(f"'{src.name}' does not have a sidecar file.")
-            return dst_path, None
+            logger.debug(f"FAILED: '{src.name}' has no sidecar file.")
+            return dst, None
 
-        dst_sidecar: Final = dst_path.with_suffix(ext)
+        sidecar_dst: Final = dst.with_suffix(ext)
+
+        if self._dry_run:
+            msg = f"DRY_RUN: Would move '{src_sidecar.name}' to '{dst_dir}"
+            msg += f"{_SEP}'.'"
+            logger.info(msg)
+            return dst, sidecar_dst
+
         try:
             # Overwrite existing sidecars in a destination
             return dst, src_sidecar.replace(sidecar_dst)
@@ -586,6 +628,11 @@ class FileOrganizer:
                 otherwise.
         """
 
+        if self._dry_run:
+            msg = f"DRY-RUN: Would move '{src.name}' to '{dst_dir}{_SEP}'."
+            logger.info(msg)
+            return dst_dir / src.name
+
         try:
             return src.move_into(dst_dir)
 
@@ -594,21 +641,19 @@ class FileOrganizer:
                 dst_dir / src.name
             )
 
-            for dst_path in islice(
-                path_generator, self.max_collision_attempts
-            ):
+            for dst_path in islice(path_generator, self.max_collision_attempts):
                 try:
                     return src.move(dst_path)
 
                 except FileExistsError:
                     continue
 
-            msg = f"Failed to create a unique name for '{src.name}' "
-            msg += f"after {self.max_collision_attempts} attempts."
+            msg = f"FAILED: Generating a unique path for '{src.name}' after "
+            msg += f"{self.max_collision_attempts} attempts."
             logger.error(msg)
 
         except PermissionError as e:
-            logger.error(f"Permission denied for '{src.name}': {e}")
+            logger.error(f"FAILED: Permission denied for '{src.name}': {e}")
 
         except OSError as e:
             # Retry if the OS temporarily locks the file.
@@ -632,7 +677,7 @@ class FileOrganizer:
         """
 
         if error.errno not in _TRANSIENT_ERRNO_CODES:
-            logger.warning(f"Non-transient error: {error}")
+            logger.error(f"FAILED: Non-transient error: {error}")
             return None
 
         for n in range(self.max_move_retries):
@@ -649,7 +694,7 @@ class FileOrganizer:
 
         msg = f"FAILED: Moving '{src.name}' after {self.max_move_retries} "
         msg += f"retries: {error}"
-        logger.warning(msg)
+        logger.error(msg)
         return None
 
     def _generate_unique_destination_path(

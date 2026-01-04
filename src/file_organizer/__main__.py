@@ -8,11 +8,10 @@ from file_organizer import FileOrganizer
 from file_organizer import __name__ as fo_name
 
 logger = logging.getLogger(fo_name)
-logger.setLevel(logging.DEBUG)
 
 
 def main() -> None:
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     handler = logging.StreamHandler()
     logger.addHandler(handler)
