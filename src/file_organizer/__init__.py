@@ -1,12 +1,48 @@
 """Automated file organizer that supports sidecar files.
 
 This module provides a rule-based file organizer that moves files into
-specified directories based on their extensions or binary signatures. It also
-handles `.xmp` sidecar files, ensuring they follow their parent files during
-organization.
-
-The organizer supports configuration via INI and JSON formats for destination
+specified directories based on their extensions or binary signatures. The
+organizer supports configuration via INI and JSON formats for destination
 mappings.
+
+Example INI schema:
+    [dir_names]
+    # Key = Directory Name
+    images = Images
+    programming = Programming
+    python = Programming/Python
+
+    [ext_to_dir]
+    # File Extension = Key from [dir_names]
+    jpg = images
+    png = images
+    py = python
+    pyw = python
+
+    [ext_to_re]
+    # File Extension = Regex Pattern
+    png = \x89PNG
+    py = #!/.+?python
+
+Example JSON schema:
+{
+    "dir_names": {
+        "images": "Images",
+        "programming": "Programming",
+        "python": "Programming/Python"
+    },
+    "ext_to_dir": {
+        "images": [".jpg", ".png"],
+        "python": [".py", ".pyw"]
+    },
+    "ext_to_re": {
+        "png": "\\x89PNG",
+        "py": "#!/.+?python"
+    }
+}
+
+It also handles `.aae` and `.xmp` sidecar files, ensuring they follow their
+parent files during organization.
 """
 
 import errno
@@ -79,22 +115,13 @@ class FileOrganizer:
         DEFAULT_DIR_NAME (str): The fallback directory when a file isn’t mapped
           to a specified directory.
 
-        dir_names (frozenset[str]): Directories the files will be
-            moved into.
-        ext_to_dir (types.MappingProxyType[str, str]): A mapping of file
-            extensions (e.g., `.jpeg`) to their destination directory name.
+        dir_names (frozenset[str]): A readonly set of valid unique directory
+            names directories and files will be moved into.
+        ext_to_dir (types.MappingProxyType[str, str]): A readonly mapping of
+            sanitized file extensions (e.g., `.jpg`) to their destination
+            directory name.
         signatures_re (re.Pattern | None): A compiled regular expression
-            to identify files based on binary signatures.
-        max_move_retries (int): The maximum number of move retries when a file
-            is locked by the OS.
-        retry_delay_seconds (float): The number of seconds to wait before
-            retrying to move a file.
-        max_collision_attempts (int): The maximum number of file regeneration
-            attempts when a filename collision arises.
-
-        _name_to_ext (types.MappingProxyType[str, str]): A mapping
-            of group names in the compiled regex pattern to their file
-            extensions.
+            to identify files based on their binary signatures.
     """
 
     # Class constants
@@ -201,6 +228,31 @@ class FileOrganizer:
         max_collision_attempts: int | None = None,
         dry_run: bool = False,
     ) -> None:
+        """Initialize the FileOrganizer with specific configurations.
+
+        This constructor sanitizes the provided extension mappings and compiles
+        binary signature patterns if provided. Configuration values (retries,
+        delays) prioritize explicit arguments, falling back to environment
+        variables, and finally hardcoded defaults.
+
+        Args:
+            dir_names: A collection of directory names to move files into.
+            ext_to_dir: A mapping of file extensions to their destination
+                directory names.
+            ext_to_re: A mapping of file extensions to their binary signature
+                regex patterns.
+            max_move_retries: The maximum number of move retries when a file
+                is locked by the OS. Defaults to `FO_MAX_MOVE_RETIRES` or 3.
+            retry_delay_seconds: The number of seconds to wait before retrying
+                to move a file. Defaults to `FO_RETRY_DELAY_SECONDS` or 0.1
+                seconds.
+            max_collision_attempts: The maximum number of file regeneration
+                attempts when a filename collision arises. Defaults to
+                `FO_MAX_COLLISION_ATTEMPTS` or 99.
+            dry_run: If `True`, no actual file operations are performed.
+                Defaults to `FO_DRY_RUN` or `False`.
+        """
+
         unique_dir_names: Final = {
             self.DEFAULT_DIR_NAME,
             *dir_names,
@@ -382,9 +434,10 @@ class FileOrganizer:
         Returns:
             A tuple containing:
                 - The compiled regex bytes pattern.
-                - A mapping of regex group names to their respective file
-                    extensions.
-            or `None` if no valid patterns are provided.
+                - A mapping of regex group names (e.g. g_jpg) to their
+                    respective file extensions.
+            Returns `None` if no valid patterns are provided or if all provided
+                patterns fail to compile.
 
         Note:
             Patterns are encoded using `latin-1` to safely map to raw bytes.
@@ -492,6 +545,10 @@ class FileOrganizer:
 
     def _get_dst_dir_name(self, entry: Path) -> str | None:
         """Determine the destination directory for the given directory or file.
+
+        This method skips ignored names, sidecar files, symlinks, and certain
+        directories and non-regular files. It uses file extensions or binary
+        signatures to map files to their target subdirectory names.
 
         Args:
             entry: The directory or file whose destination needs to be
@@ -615,7 +672,6 @@ class FileOrganizer:
         except OSError as e:
             return dst, self._retry_move_to_dir(src, dst_dir, e)
 
-    # TODO: Determine if pathlib.Path.move_into() is cross-drive safe in Windows
     def _move_to_dir(self, src: Path, dst_dir: Path) -> Path | None:
         """Attempt to move `src` into `dst_dir`.
 
@@ -701,13 +757,13 @@ class FileOrganizer:
         self,
         path: Path,
     ) -> Generator[Path, None, None]:
-        """Generate a path with a counter appended to its stem.
+        """Generate paths with an incrementing counter appended to their stem.
 
         Args:
-            path: A destination path that encounters a name collision.
+            path: A path that encounters a name collision.
 
         Yields:
-            A path with a number appended to its stem.
+            A path with an incremented counter appended to its stem.
         """
 
         stem: Final = path.stem
