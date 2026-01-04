@@ -90,6 +90,14 @@ _PYTHON_IDENTIFIER_RE: Final = re.compile(r"\W")
 regex group names.
 """
 
+_DEFAULT_MAX_MOVE_RETRIES: Final = int(os.getenv("FO_MAX_MOVE_RETRIES", 3))
+_DEFAULT_RETRY_DELAY_SECONDS: Final = float(
+    os.getenv("FO_RETRY_DELAY_SECONDS", 0.1)
+)
+_DEFAULT_MAX_COLLISION_ATTEMPTS: Final = int(
+    os.getenv("FO_MAX_COLLISION_ATTEMPTS", 99)
+)
+_DEFAULT_DRY_RUN: Final = os.getenv("FO_DRY_RUN", "0") == "1"
 
 logger = logging.getLogger(__name__)
 
@@ -318,16 +326,22 @@ class FileOrganizer:
                 f"{LogActions.INIT}: No binary signature regex provided."
             )
 
-        self.max_move_retries: Final = max_move_retries or int(
-            os.getenv("FO_MAX_MOVE_RETRIES", 3)
+        self.max_move_retries: Final = (
+            max_move_retries
+            if max_move_retries is not None
+            else _DEFAULT_MAX_MOVE_RETRIES
         )
-        self.retry_delay_seconds: Final = retry_delay_seconds or float(
-            os.getenv("FO_RETRY_DELAY_SECONDS", 0.1)
+        self.retry_delay_seconds: Final = (
+            retry_delay_seconds
+            if retry_delay_seconds is not None
+            else _DEFAULT_RETRY_DELAY_SECONDS
         )
-        self.max_collision_attempts: Final = max_collision_attempts or int(
-            os.getenv("FO_MAX_COLLISION_ATTEMPTS", 99)
+        self.max_collision_attempts: Final = (
+            max_collision_attempts
+            if max_collision_attempts is not None
+            else _DEFAULT_MAX_COLLISION_ATTEMPTS
         )
-        self._dry_run: Final = dry_run or os.getenv("FO_DRY_RUN", "0") == "1"
+        self._dry_run: Final = dry_run or _DEFAULT_DRY_RUN
 
     # Public methods
 
