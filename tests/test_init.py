@@ -14,20 +14,20 @@ def test_init():
 
     organizer = FileOrganizer(destination_dirs, extensions_map)
 
-    assert "Python" in organizer.destination_dir_names
-    assert ".PY" not in organizer.extension_to_dir
-    assert organizer.extension_to_dir.get(".PY") is None
-    assert organizer.extension_to_dir.get(".py") == "Python"
+    assert "Python" in organizer.dir_names
+    assert ".PY" not in organizer.ext_to_dir
+    assert organizer.ext_to_dir.get(".PY") is None
+    assert organizer.ext_to_dir.get(".py") == "Python"
 
-    assert organizer.signature_pattern_re is None
+    assert organizer.signatures_re is None
 
     organizer = FileOrganizer(
         destination_dirs, extensions_map, signature_patterns
     )
 
     assert (
-        organizer.signature_pattern_re is not None
-        and b"#!/.+?python" in organizer.signature_pattern_re.pattern
+        organizer.signatures_re is not None
+        and b"#!/.+?python" in organizer.signatures_re.pattern
     )
 
 
@@ -37,7 +37,7 @@ def test_from_ini(tmp_path):
     with pytest.raises(FileNotFoundError):
         FileOrganizer.from_ini(conf)
 
-    ini = "[destination_dirs]\npython = Python"
+    ini = "[dir_names]\npython = Python"
     conf.write_text(ini)
 
     conf.chmod(0)
@@ -48,22 +48,22 @@ def test_from_ini(tmp_path):
     with pytest.raises(MissingRequiredFieldsError):
         FileOrganizer.from_ini(conf)
 
-    ini += "\n[extensions_map]py = python"
+    ini += "\n[ext_to_dir]py = python"
     conf.write_text(ini)
     organizer = FileOrganizer.from_ini(conf)
 
-    assert organizer.signature_pattern_re is None
+    assert organizer.signatures_re is None
 
     conf = Path(__file__).with_name("extensions_map.ini")
     organizer = FileOrganizer.from_ini(conf)
 
-    assert "Programming/Python" in organizer.destination_dir_names
+    assert "Programming/Python" in organizer.dir_names
     assert (
-        organizer.signature_pattern_re is not None
-        and b"#!/.+?python" in organizer.signature_pattern_re.pattern
+        organizer.signatures_re is not None
+        and b"#!/.+?python" in organizer.signatures_re.pattern
     )
-    assert b"\x89PNG" in organizer.signature_pattern_re.pattern
-    assert "Programming/Python" == organizer.extension_to_dir[".py"]
+    assert b"\x89PNG" in organizer.signatures_re.pattern
+    assert "Programming/Python" == organizer.ext_to_dir[".py"]
 
 
 def test_from_json(tmp_path):
@@ -81,9 +81,9 @@ def test_from_json(tmp_path):
     conf = Path(__file__).with_name("extensions_map.json")
     organizer = FileOrganizer.from_json(conf)
 
-    assert "Programming/Python" in organizer.destination_dir_names
+    assert "Programming/Python" in organizer.dir_names
     assert (
-        organizer.signature_pattern_re is not None
-        and b"#!/.+?python" in organizer.signature_pattern_re.pattern
+        organizer.signatures_re is not None
+        and b"#!/.+?python" in organizer.signatures_re.pattern
     )
-    assert "Programming/Python" in organizer.extension_to_dir[".py"]
+    assert "Programming/Python" in organizer.ext_to_dir[".py"]

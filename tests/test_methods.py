@@ -8,7 +8,7 @@ from file_organizer import FileOrganizer
 # TODO: More tests
 
 TEST_CONFIG = r"""
-[destination_dirs]
+[dir_names]
 archives = Archives
 images = Images
 images_raw = Images/Raw
@@ -16,13 +16,13 @@ programming = Programming
 python = Programming/Python
 shell = Programming/Shell
 
-[signature_patterns]
+[ext_to_re]
 png = \x89PNG
 py = #!/.+?python
 sh = #!/.+?sh
 zip = PK\x03\x04
 
-[extensions_map]
+[ext_to_dir]
 jpeg = images
 png = images
 dng = images_raw
@@ -42,7 +42,7 @@ def organizer(tmp_path):
 
 
 def test__determine_dst(organizer, tmp_path):
-    organizer._create_destination_dirs(tmp_path)
+    organizer._create_dirs(tmp_path)
 
     s = tmp_path / "s"
     s.symlink_to(os.path.expanduser("~/Desktop/untitled"))
@@ -67,18 +67,18 @@ def test__determine_dst(organizer, tmp_path):
 
     paths = {
         s.name: None,
-        d.name: organizer.FALLBACK_DIR_NAME,
+        d.name: organizer.DEFAULT_DIR_NAME,
         f.name: None,
         x.name: None,
-        e.name: organizer.extension_to_dir[".py"],
-        p.name: organizer.extension_to_dir[".py"],
-        r.name: organizer.extension_to_dir[".dng"],
-        **{k: None for k in organizer.destination_dir_names},
-        "conf.cfg": organizer.extension_to_dir[".cfg"],
+        e.name: organizer.ext_to_dir[".py"],
+        p.name: organizer.ext_to_dir[".py"],
+        r.name: organizer.ext_to_dir[".dng"],
+        **{k: None for k in organizer.dir_names},
+        "conf.cfg": organizer.ext_to_dir[".cfg"],
     }
 
     for entry in tmp_path.iterdir():
-        dst = organizer._determine_dst(entry)
+        dst = organizer._get_dst_dir_name(entry)
         result = paths[entry.name]
 
         assert result is dst if not result else result == dst
@@ -87,34 +87,34 @@ def test__determine_dst(organizer, tmp_path):
 def test__get_extensionless_dst(organizer, tmp_path):
     png = tmp_path / "png"
     png.write_bytes(b"\x89PNG")
-    png_target = organizer._get_extensionless_dst(png)
+    png_target = organizer._get_dst_dir_name_by_signature(png)
 
     python = tmp_path / "python"
     python.write_text('#!/usr/bin/env -S python3\n\nprint("Hello, World!")\n')
-    python_target = organizer._get_extensionless_dst(python)
+    python_target = organizer._get_dst_dir_name_by_signature(python)
 
     bash = tmp_path / "bash"
     bash.write_text("#!/usr/bin/env -S bash\n\necho 'Hello, World!'\n")
-    bash_target = organizer._get_extensionless_dst(bash)
+    bash_target = organizer._get_dst_dir_name_by_signature(bash)
 
     zipfile = tmp_path / "zip"
     with ZipFile(zipfile, mode="x") as f:
         f.write(python)
-    zipfile_target = organizer._get_extensionless_dst(zipfile)
+    zipfile_target = organizer._get_dst_dir_name_by_signature(zipfile)
 
     unknown = tmp_path / "unknown"
     unknown.write_text("Some unknown file")
-    unknown_target = organizer._get_extensionless_dst(unknown)
+    unknown_target = organizer._get_dst_dir_name_by_signature(unknown)
 
-    assert png_target == organizer.extension_to_dir[".png"]
-    assert python_target == organizer.extension_to_dir[".py"]
-    assert bash_target == organizer.extension_to_dir[".sh"]
-    assert zipfile_target == organizer.extension_to_dir[".zip"]
-    assert unknown_target == organizer.FALLBACK_DIR_NAME
+    assert png_target == organizer.ext_to_dir[".png"]
+    assert python_target == organizer.ext_to_dir[".py"]
+    assert bash_target == organizer.ext_to_dir[".sh"]
+    assert zipfile_target == organizer.ext_to_dir[".zip"]
+    assert unknown_target == organizer.DEFAULT_DIR_NAME
 
 
 def test__move_file_and_sidecar(organizer, tmp_path):
-    organizer._create_destination_dirs(tmp_path)
+    organizer._create_dirs(tmp_path)
 
     img = tmp_path / "jpeg.jpeg"
     img.write_text("Some image")
@@ -131,14 +131,14 @@ def test__move_file_and_sidecar(organizer, tmp_path):
     xmp3 = tmp_path / "xmp.xmp"
     xmp3.write_text("Some dangling xmp file")
 
-    img_target = tmp_path / organizer.extension_to_dir.get(
-        img.suffix, organizer.FALLBACK_DIR_NAME
+    img_target = tmp_path / organizer.ext_to_dir.get(
+        img.suffix, organizer.DEFAULT_DIR_NAME
     )
-    raw_target = tmp_path / organizer.extension_to_dir.get(
-        raw.suffix, organizer.FALLBACK_DIR_NAME
+    raw_target = tmp_path / organizer.ext_to_dir.get(
+        raw.suffix, organizer.DEFAULT_DIR_NAME
     )
-    xmp_target = tmp_path / organizer.extension_to_dir.get(
-        xmp3.suffix, organizer.FALLBACK_DIR_NAME
+    xmp_target = tmp_path / organizer.ext_to_dir.get(
+        xmp3.suffix, organizer.DEFAULT_DIR_NAME
     )
 
     assert img_target == tmp_path / "Images"
@@ -174,11 +174,11 @@ def test__try_move(organizer, tmp_path):
     f = tmp_path / "file.txt"
     f.write_text("Hello, World!")
 
-    result = organizer._try_move_into(f, dst_dir)
+    result = organizer._move_to_dir(f, dst_dir)
     assert result is None
 
     dst_dir.chmod(0o755)
-    result = organizer._try_move_into(f, dst_dir)
+    result = organizer._move_to_dir(f, dst_dir)
     assert result == dst_dir / f.name
 
 

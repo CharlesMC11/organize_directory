@@ -1,5 +1,5 @@
 {
-  "destination_dirs": {
+  "dir_names": {
     "3d": "3D",
     "blender": "3D/Blender",
     "maya": "3D/Maya",
@@ -17,13 +17,13 @@
     "shell": "Programming/Shell",
     "videos": "Videos"
   },
-  "signature_patterns": {
+  "ext_to_re": {
     "png": "\\x89PNG",
     "py": "#!/.+?python",
     "sh": "#!/.+?sh",
     "zip": "PK\\x03\\x04"
   },
-  "extensions_map": {
+  "ext_to_dir": {
     "3d": [
       "abc",
       "fbx",

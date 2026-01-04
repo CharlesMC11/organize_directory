@@ -74,23 +74,23 @@ class FileOrganizer:
     Attributes:
         SIGNATURE_READ_SIZE (int): The number of bytes read from an
             extensionless file’s header.
-        FALLBACK_DIR_NAME (str): The fallback directory when a file isn’t mapped
+        DEFAULT_DIR_NAME (str): The fallback directory when a file isn’t mapped
           to a specified directory.
 
-        destination_dir_names (frozenset[str]): Directories the files will be
+        dir_names (frozenset[str]): Directories the files will be
             moved into.
-        extension_to_dir (types.MappingProxyType[str, str]): A mapping of file
+        ext_to_dir (types.MappingProxyType[str, str]): A mapping of file
             extensions (e.g., `.jpeg`) to their destination directory name.
-        signature_pattern_re (re.Pattern | None): A compiled regular expression
+        signatures_re (re.Pattern | None): A compiled regular expression
             to identify files based on binary signatures.
-        max_move_attempts (int): The maximum number of move retries when a file
+        max_move_retries (int): The maximum number of move retries when a file
             is locked by the OS.
         retry_delay_seconds (float): The number of seconds to wait before
             retrying to move a file.
         max_collision_attempts (int): The maximum number of file regeneration
             attempts when a filename collision arises.
 
-        _group_name_to_extension (types.MappingProxyType[str, str]): A mapping
+        _name_to_ext (types.MappingProxyType[str, str]): A mapping
             of group names in the compiled regex pattern to their file
             extensions.
     """
@@ -102,7 +102,7 @@ class FileOrganizer:
     check for binary signatures.
     """
 
-    FALLBACK_DIR_NAME: Final = "Misc"
+    DEFAULT_DIR_NAME: Final = "Misc"
     """The default directory used when a directory or file does not match any
     rule.
     """
@@ -123,30 +123,32 @@ class FileOrganizer:
 
         Raises:
             FileNotFoundError: If the provided path does not exist.
-            MissingRequiredFieldsError: If the `destination_dir_names` and
-                `extension_to_dir` sections are missing.
+            MissingRequiredFieldsError: If the `dir_names` and
+                `ext_to_dir` sections are missing.
         """
 
         parser = ConfigParser()
         with cls._read_validated_config(config_path) as f:
             parser.read_file(f)
 
-        cls._validate_config_required_fields(parser.sections())
+        cls._validate_config_fields(parser.sections())
 
-        destination_dirs = parser["destination_dirs"].values()
+        dir_names = parser["dir_names"].values()
 
-        extensions_map = {
-            ext: parser["destination_dirs"][key]
-            for ext, key in parser["extensions_map"].items()
+        ext_to_dir = {
+            ext: parser["dir_names"][key]
+            for ext, key in parser["ext_to_dir"].items()
         }
 
-        signature_patterns = None
-        if "signature_patterns" in parser:
-            signature_patterns = parser["signature_patterns"]
+        ext_to_re = None
+        if "ext_to_re" in parser:
+            ext_to_re = parser["ext_to_re"]
 
-        return cls(destination_dirs, extensions_map, signature_patterns)
+        logger.info(f"CONFIG: Loaded rules from '{config_path.name}'.")
 
-    # FIXME: Handle missing keys better
+        return cls(dir_names, ext_to_dir, ext_to_re)
+
+    # FIXME: Handle missing fields better
     @classmethod
     def from_json(cls, config_path: Path) -> FileOrganizer:
         """Initialize the organizer using an JSON configuration file.
@@ -160,25 +162,25 @@ class FileOrganizer:
 
         Raises:
             FileNotFoundError: If the provided path does not exist.
-            MissingRequiredFieldsError: If the `destination_dir_names` and
-                `extension_to_dir` keys are missing.
+            MissingRequiredFieldsError: If the `dir_names` and
+                `ext_to_dir` fields are missing.
         """
 
         with cls._read_validated_config(config_path) as f:
             content = json.load(f)
 
-        cls._validate_config_required_fields(content.keys())
+        cls._validate_config_fields(content.keys())
 
-        destination_dirs = content["destination_dirs"].values()
+        dir_names = content["dir_names"].values()
 
-        extensions_map = {}
-        for key, extensions in content["extensions_map"].items():
+        ext_to_dir = {}
+        for dir_key, extensions in content["ext_to_dir"].items():
             for ext in extensions:
-                extensions_map[ext] = content["destination_dirs"][key]
+                ext_to_dir[ext] = content["dir_names"][dir_key]
 
-        signature_patterns = None
-        if "signature_patterns" in content:
-            signature_patterns = content["signature_patterns"]
+        ext_to_re = None
+        if "ext_to_re" in content:
+            ext_to_re = content["ext_to_re"]
 
         return cls(destination_dirs, extensions_map, signature_patterns)
 
@@ -186,33 +188,46 @@ class FileOrganizer:
 
     def __init__(
         self,
-        destination_dir_names: Collection[str],
-        extension_to_dir: Mapping[str, str],
-        signature_patterns_map: Mapping[str, str] | None = None,
+        dir_names: Collection[str],
+        ext_to_dir: Mapping[str, str],
+        ext_to_re: Mapping[str, str] | None = None,
         *,
-        max_collision_attempts: int = 99,
-        max_move_attempts: int = 3,
-        retry_delay_seconds: float = 0.1,
+        max_move_retries: int | None = None,
+        retry_delay_seconds: float | None = None,
+        max_collision_attempts: int | None = None,
+        dry_run: bool = False,
     ) -> None:
-        unique_dst_dirs: Final = {
-            self.FALLBACK_DIR_NAME,
-            *destination_dir_names,
+        unique_dir_names: Final = {
+            self.DEFAULT_DIR_NAME,
+            *dir_names,
         }
 
         validated_map: dict[str, str] = {}
-        for ext, dst in extension_to_dir.items():
-            if not (sanitized_ext := self._sanitize_file_extension(ext)):
-                msg = f"Sanitized file extension '{ext}' is empty, skipping."
+        for ext, dst_dir in ext_to_dir.items():
+            if not (sanitized_ext := self._sanitize_ext(ext)):
+                msg = f"INIT: Sanitized '{ext}' is empty, skipping."
                 logger.warning(msg)
                 continue
 
-            # `dst` has be an existing entry in `unique_dst_dirs`
-            if dst in unique_dst_dirs:
+            # `dst_dir` has be an existing entry in `unique_dst_dirs`
+            if dst_dir in unique_dir_names:
                 if sanitized_ext in validated_map:
                     msg = f"{sanitized_ext} already exists in {validated_map}, "
                     msg += "updating value."
                     logger.warning(msg)
                 validated_map[sanitized_ext] = dst
+                validated_map[sanitized_ext] = dst_dir
+
+        self.dir_names: Final = frozenset(unique_dir_names)
+        self.ext_to_dir: Final = MappingProxyType(validated_map)
+
+        self.signatures_re = None
+        if ext_to_re:
+            if patterns := self._compile_signature_re(
+                validated_map.keys(), ext_to_re
+            ):
+                self.signatures_re = patterns[0]
+                self._name_to_ext: Final = patterns[1]
             else:
                 logger.warning(
                     f"{dst} not in `destination_dir_names`, ignoring."
@@ -229,9 +244,16 @@ class FileOrganizer:
                 self.signature_pattern_re = patterns[0]
                 self._group_name_to_extension: Final = patterns[1]
 
-        self.max_move_attempts: Final = max_move_attempts
-        self.retry_delay_seconds: Final = retry_delay_seconds
-        self.max_collision_attempts: Final = max_collision_attempts
+        self.max_move_retries: Final = max_move_retries or int(
+            os.getenv("FO_MAX_MOVE_RETRIES", 3)
+        )
+        self.retry_delay_seconds: Final = retry_delay_seconds or float(
+            os.getenv("FO_RETRY_DELAY_SECONDS", 0.1)
+        )
+        self.max_collision_attempts: Final = max_collision_attempts or int(
+            os.getenv("FO_MAX_COLLISION_ATTEMPTS", 99)
+        )
+        self._dry_run: Final = dry_run or os.getenv("FO_DRY_RUN", "0") == "1"
 
     # Public methods
 
@@ -292,7 +314,7 @@ class FileOrganizer:
             raise FileNotFoundError from e
 
     @staticmethod
-    def _validate_config_required_fields(keys: Collection[str]) -> None:
+    def _validate_config_fields(fields: Collection[str]) -> None:
         """Validate the required fields of a config file.
 
         Raises:
@@ -302,10 +324,11 @@ class FileOrganizer:
 
         if missing := _REQUIRED_CONFIG_KEYS - frozenset(keys):
             msg = f"Missing required sections: {', '.join(missing)}"
+        if missing := _REQUIRED_CONFIG_FIELDS - frozenset(fields):
             raise MissingRequiredFieldsError(msg)
 
     @staticmethod
-    def _sanitize_file_extension(ext: str) -> str:
+    def _sanitize_ext(ext: str) -> str:
         """Strip spaces and dots from `ext`, then lowercase it.
 
         Args:
@@ -322,10 +345,10 @@ class FileOrganizer:
             return f".{ext}"
         return ""
 
-    def _compile_signature_patterns(
+    def _compile_signature_re(
         self,
-        validated_extensions: Collection[str],
-        signature_patterns: Mapping[str, str],
+        validated_ext: Collection[str],
+        ext_to_re: Mapping[str, str],
     ) -> tuple[re.Pattern[bytes], MappingProxyType[str, str]] | None:
         """Compile multiple binary signature patterns into one optimized regex.
 
@@ -334,10 +357,10 @@ class FileOrganizer:
         one single regex pass on a file’s header to determine its type.
 
         Args:
-            validated_extensions: A collection of extensions the organizer
+            validated_ext: A collection of extensions the organizer
                 supports.
-            signature_patterns: A mapping of extensions to their binary
-                signature patterns.
+            ext_to_re: A mapping of extensions to their binary signature
+                patterns.
 
         Returns:
             A tuple containing:
@@ -353,17 +376,20 @@ class FileOrganizer:
         target_encoding: Final = "latin-1"
 
         groups: list[str] = []
-        name_map: dict[str, str] = {}
+        name_to_ext: dict[str, str] = {}
 
         # `ext` has to be an existing key in `normalized_map`
         for ext, raw_pattern in signature_patterns.items():
             if not (sanitized_ext := self._sanitize_file_extension(ext)):
                 msg = f"Sanitized file extension '{ext}' is empty, skipping."
+        for ext, raw_pattern in ext_to_re.items():
+            if not (sanitized_ext := self._sanitize_ext(ext)):
                 logger.warning(msg)
                 continue
 
             elif sanitized_ext not in validated_extensions:
                 msg = f"{sanitized_ext} not in `extensions_map`, ignoring."
+            elif sanitized_ext not in validated_ext:
                 logger.warning(msg)
                 continue
 
@@ -378,6 +404,9 @@ class FileOrganizer:
                 )
                 name_map[group_name] = sanitized_ext
                 groups.append(f"(?P<{group_name}>(?>{unescaped}))")
+                name = f"g_{_PYTHON_IDENTIFIER_RE.sub('_', sanitized_ext)}"
+                name_to_ext[name] = sanitized_ext
+                groups.append(f"(?P<{name}>(?>{unescaped}))")
 
             except (UnicodeError, re.error):
                 msg = f"Invalid pattern '{raw_pattern}' for '{sanitized_ext}', "
@@ -393,10 +422,10 @@ class FileOrganizer:
             combined.encode(target_encoding), re.NOFLAG
         )
 
-        return compiled, MappingProxyType(name_map)
+        return compiled, MappingProxyType(name_to_ext)
 
-    def _create_destination_dirs(self, root_dir: Path) -> None:
-        """Create the subdirectories listed in `destination_dir_names`.
+    def _create_dirs(self, root_dir: Path) -> None:
+        """Create the subdirectories listed in `dir_names`.
 
         Args:
             root_dir: The directory to organize.
@@ -410,7 +439,7 @@ class FileOrganizer:
             raise NotADirectoryError(f"Not a directory: '{root_dir.name}'")
 
         try:
-            for dst in self.destination_dir_names:
+            for dst in self.dir_names:
                 (root_dir / dst).mkdir(parents=True, exist_ok=True)
 
         except (PermissionError, OSError):
@@ -424,7 +453,7 @@ class FileOrganizer:
             root_dir: The source directory containing the entry.
         """
 
-        if not (dst_dir := self._determine_dst(entry)):
+        if not (dst_dir_name := self._get_dst_dir_name(entry)):
             return
 
         dst_path = root_dir / dst_dir
@@ -434,7 +463,7 @@ class FileOrganizer:
         else:
             self._move_file_and_sidecar(entry, dst_path)
 
-    def _determine_dst(self, entry: Path) -> str | None:
+    def _get_dst_dir_name(self, entry: Path) -> str | None:
         """Determine the destination directory for the given directory or file.
 
         Args:
@@ -460,8 +489,9 @@ class FileOrganizer:
 
         elif info.is_dir():
             if name in self.destination_dir_names or name.endswith("download"):
+            if name in self.dir_names or name.endswith("download"):
                 return None
-            return self.FALLBACK_DIR_NAME
+            return self.DEFAULT_DIR_NAME
 
         elif not info.is_file():
             return None
@@ -469,12 +499,12 @@ class FileOrganizer:
         elif not entry.suffix:
             return self._get_extensionless_dst(entry)
 
-        elif dst := self.extension_to_dir.get(ext):
-            return dst
+        if dst_dir_name := self.ext_to_dir.get(ext):
+            return dst_dir_name
 
-        return self.FALLBACK_DIR_NAME
+        return self.DEFAULT_DIR_NAME
 
-    def _get_extensionless_dst(self, file: Path) -> str:
+    def _get_dst_dir_name_by_signature(self, file: Path) -> str:
         """Get the target directory for a file without an extension.
 
         Args:
@@ -485,8 +515,8 @@ class FileOrganizer:
                 directory name if its signature is not associated with a rule
         """
 
-        if self.signature_pattern_re is None:
-            return self.FALLBACK_DIR_NAME
+        if self.signatures_re is None:
+            return self.DEFAULT_DIR_NAME
 
         try:
             with file.open("rb") as f:
@@ -495,17 +525,22 @@ class FileOrganizer:
         except OSError as e:
             logger.error(f"Could not open file '{file.name}': {e}")
             return self.FALLBACK_DIR_NAME
+            return self.DEFAULT_DIR_NAME
 
         if not header:
-            return self.FALLBACK_DIR_NAME
+            return self.DEFAULT_DIR_NAME
 
-        elif not (match := self.signature_pattern_re.match(header)):
-            return self.FALLBACK_DIR_NAME
+        if not (match := self.signatures_re.match(header)):
+            return self.DEFAULT_DIR_NAME
 
         group_name: Final = match.lastgroup or ""
         if not (file_ext := self._group_name_to_extension.get(group_name)):
             return self.FALLBACK_DIR_NAME
         return self.extension_to_dir.get(file_ext, self.FALLBACK_DIR_NAME)
+        if not (ext := self._name_to_ext.get(group_name)):
+            return self.DEFAULT_DIR_NAME
+
+        return self.ext_to_dir.get(ext, self.DEFAULT_DIR_NAME)
 
     def _move_file_and_sidecar(
         self, src: Path, dst_dir: Path
@@ -527,7 +562,7 @@ class FileOrganizer:
                     `None` otherwise.
         """
 
-        if (dst_path := self._try_move_into(src, dst_dir)) is None:
+        if (dst := self._move_to_dir(src, dst_dir)) is None:
             return None, None
 
         src_sidecar = ext = None
@@ -543,13 +578,13 @@ class FileOrganizer:
         dst_sidecar: Final = dst_path.with_suffix(ext)
         try:
             # Overwrite existing sidecars in a destination
-            return dst_path, src_sidecar.replace(dst_sidecar)
+            return dst, src_sidecar.replace(sidecar_dst)
 
         except OSError as e:
-            return dst_path, self._retry_move_into(src, dst_dir, e)
+            return dst, self._retry_move_to_dir(src, dst_dir, e)
 
     # TODO: Determine if pathlib.Path.move_into() is cross-drive safe in Windows
-    def _try_move_into(self, src: Path, dst_dir: Path) -> Path | None:
+    def _move_to_dir(self, src: Path, dst_dir: Path) -> Path | None:
         """Attempt to move `src` into `dst_dir`.
 
         Args:
@@ -565,11 +600,13 @@ class FileOrganizer:
             return src.move_into(dst_dir)
 
         except FileExistsError:
-            dst_generator: Final = self._generate_unique_destination_path(
+            path_generator: Final = self._generate_unique_destination_path(
                 dst_dir / src.name
             )
 
-            for dst_path in islice(dst_generator, self.max_collision_attempts):
+            for dst_path in islice(
+                path_generator, self.max_collision_attempts
+            ):
                 try:
                     return src.move(dst_path)
 
@@ -585,11 +622,11 @@ class FileOrganizer:
 
         except OSError as e:
             # Retry if the OS temporarily locks the file.
-            return self._retry_move_into(src, dst_dir, e)
+            return self._retry_move_to_dir(src, dst_dir, e)
 
         return None
 
-    def _retry_move_into(
+    def _retry_move_to_dir(
         self, src: Path, dst_dir: Path, error: OSError
     ) -> Path | None:
         """Retry moving `src` into `dst_dir` after the caller raises an OSError.
@@ -608,11 +645,11 @@ class FileOrganizer:
             logger.warning(f"Non-transient error: {error}")
             return None
 
-        for n in range(self.max_move_attempts):
+        for n in range(self.max_move_retries):
             delay = self.retry_delay_seconds * (2**n)
 
-            msg = f"Retrying to move '{src.name}' in {delay:.2f}s "
-            msg += f"(attempt {n + 1}/{self.max_move_attempts})"
+            msg = f"RETRY [{n + 1}/{self.max_move_retries}]: Moving "
+            msg += f"'{src.name}' in {delay:.2f} s."
             logger.info(msg)
             try:
                 return src.move_into(dst_dir)
@@ -620,7 +657,7 @@ class FileOrganizer:
             except OSError:
                 sleep(delay)
 
-        msg = f"Failed to move '{src.name}' after {self.max_move_attempts} "
+        msg = f"FAILED: Moving '{src.name}' after {self.max_move_retries} "
         msg += f"retries: {error}"
         logger.warning(msg)
         return None
