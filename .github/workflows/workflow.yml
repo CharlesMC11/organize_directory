@@ -1,0 +1,16 @@
+name: CI
+on: [ push ]
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.9.18"
+
+      - run: uv sync
+      - run: uv run ruff check --fix
+      - run: uv run mypy src tests
+      - run: uv run pytest
