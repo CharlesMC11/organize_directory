@@ -348,6 +348,7 @@ class FileOrganizer:
         try:
             return src.move_into(dst_dir)
 
+        # FIXME: This doesn’t actually get raised
         except FileExistsError:
             paths: Final = self._generate_unique_destination_path(
                 dst_dir / src.name
