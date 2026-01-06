@@ -1,16 +1,21 @@
-import os.path
+import logging
+import os
 from zipfile import ZipFile
 
 import pytest
 
-from file_organizer import FileOrganizer, OrganizerConfig
+import file_organizer
+from file_organizer import FileOrganizer, LogActions, OrganizerConfig
 
 # TODO: More tests
+
+logger = logging.getLogger(file_organizer.__name__)
+logger.setLevel(logging.DEBUG)
 
 
 @pytest.fixture
 def organizer():
-    config = OrganizerConfig(
+    conf = OrganizerConfig(
         (
             "Archives",
             "Images",
@@ -38,10 +43,28 @@ def organizer():
         },
     )
 
-    return FileOrganizer(config)
+    return FileOrganizer(conf)
 
 
-def test__determine_dst(organizer, tmp_path):
+def test__create_dirs(organizer, tmp_path):
+    test_dir = tmp_path / "test_dir"
+
+    with pytest.raises(NotADirectoryError):
+        organizer._create_dirs(test_dir)
+
+    assert not (test_dir / organizer.config.DEFAULT_DIR_NAME).is_dir()
+
+    test_dir.mkdir(0)
+    assert test_dir.is_dir()
+
+    with pytest.raises(PermissionError):
+        organizer._create_dirs(test_dir)
+
+    organizer._create_dirs(tmp_path)
+    assert (tmp_path / organizer.config.DEFAULT_DIR_NAME).is_dir()
+
+
+def test__get_dst_dir_name(organizer, tmp_path):
     organizer._create_dirs(tmp_path)
 
     s = tmp_path / "s"
@@ -84,7 +107,7 @@ def test__determine_dst(organizer, tmp_path):
         assert result is dst if not result else result == dst
 
 
-def test__get_extensionless_dst(organizer, tmp_path):
+def test__get_dst_dir_name_by_signature(organizer, caplog, tmp_path):
     png = tmp_path / "png"
     png.write_bytes(b"\x89PNG")
     png_target = organizer._get_dst_dir_name_by_signature(png)
@@ -111,6 +134,22 @@ def test__get_extensionless_dst(organizer, tmp_path):
     assert bash_target == organizer.config.ext_to_dir[".sh"]
     assert zipfile_target == organizer.config.ext_to_dir[".zip"]
     assert unknown_target == organizer.config.DEFAULT_DIR_NAME
+
+    args = ("Images",), {" ..PNG  ": "Images"}
+    conf = OrganizerConfig(*args)
+    fo = FileOrganizer(conf)
+    assert conf.signatures_re is None
+    assert fo._get_dst_dir_name_by_signature(png) == conf.DEFAULT_DIR_NAME
+    # assert f"{LogActions.SKIPPED}: No regex" in caplog.text
+
+    png.chmod(0)
+    assert fo._get_dst_dir_name_by_signature(png) == conf.DEFAULT_DIR_NAME
+    # assert f"{LogActions.FAILED}: Opening" in caplog.text
+
+    args = *args, {" ....Png   ": r"\x89PNG"}
+    conf = OrganizerConfig(*args)
+    fo = FileOrganizer(conf)
+    assert fo._get_dst_dir_name_by_signature(python) == conf.DEFAULT_DIR_NAME
 
 
 def test__move_file_and_sidecar(organizer, tmp_path):
@@ -167,19 +206,24 @@ def test__move_file_and_sidecar(organizer, tmp_path):
             assert (xmp_target / "xmp.xmp").exists()
 
 
-def test__try_move(organizer, tmp_path):
+def test__move_to_dir(organizer, caplog, tmp_path):
     dst_dir = tmp_path / "dst"
-    dst_dir.mkdir(mode=0o000)
+    dst_dir.mkdir(0)
 
     f = tmp_path / "file.txt"
     f.write_text("Hello, World!")
 
     result = organizer._move_to_dir(f, dst_dir)
     assert result is None
+    assert "Permission denied" in caplog.text
 
     dst_dir.chmod(0o755)
     result = organizer._move_to_dir(f, dst_dir)
     assert result == dst_dir / f.name
+
+    f.write_text("Hello, World!")
+    result = organizer._move_to_dir(f, dst_dir)
+    assert result == dst_dir / f"{f.stem}_01{f.suffix}"
 
 
 def test__generate_unique_destination_path(organizer, tmp_path):
@@ -191,5 +235,9 @@ def test__generate_unique_destination_path(organizer, tmp_path):
 
     new_path = next(organizer._generate_unique_destination_path(dst))
     padding = len(str(organizer.config.max_collision_attempts))
-
     assert new_path.stem == f"file_{1:0{padding}}"
+
+    new_path.write_text("Hello, World!")
+
+    new_path = next(organizer._generate_unique_destination_path(dst))
+    assert new_path.stem == f"file_{2:0{padding}}"
