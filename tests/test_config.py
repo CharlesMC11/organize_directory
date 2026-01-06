@@ -1,6 +1,6 @@
 import pytest
 
-from file_organizer.config import (
+from file_organizer.organizer_config import (
     CONFIG_ENCODING,
     MissingRequiredFieldsError,
     OrganizerConfig,

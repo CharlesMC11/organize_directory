@@ -18,8 +18,11 @@ from pathlib import Path
 from time import sleep
 from typing import Final
 
-from .config import OrganizerConfig
-from .logs import LogActions
+from .log_actions import LogActions
+from .organizer_config import OrganizerConfig
+
+__all__ = ("FILE_SEP", "FileOrganizer")
+
 
 FILE_SEP: Final = os.sep
 """Platform-dependent file separator."""
@@ -42,8 +45,6 @@ _TRANSIENT_ERRNO_CODES: Final = frozenset(
 """OS error codes that trigger retry attempts because they are typically
 temporary.
 """
-
-__all__ = ("FileOrganizer",)
 
 logger = logging.getLogger(__name__)
 

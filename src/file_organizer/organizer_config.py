@@ -47,9 +47,10 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Collection, Final, Mapping, TextIO
 
-from .logs import LogActions
+from .log_actions import LogActions
 
-__all__ = "CONFIG_ENCODING", "OrganizerConfig", "MissingRequiredFieldsError"
+__all__ = "CONFIG_ENCODING", "MissingRequiredFieldsError", "OrganizerConfig"
+
 
 CONFIG_ENCODING: Final = "utf-8"
 """File encoding used for configuration files."""
