@@ -3,42 +3,42 @@ from zipfile import ZipFile
 
 import pytest
 
-from file_organizer import FileOrganizer
+from file_organizer import FileOrganizer, OrganizerConfig
 
 # TODO: More tests
 
-TEST_CONFIG = r"""
-[dir_names]
-archives = Archives
-images = Images
-images_raw = Images/Raw
-programming = Programming
-python = Programming/Python
-shell = Programming/Shell
-
-[ext_to_re]
-png = \x89PNG
-py = #!/.+?python
-sh = #!/.+?sh
-zip = PK\x03\x04
-
-[ext_to_dir]
-jpeg = images
-png = images
-dng = images_raw
-cfg = programming
-py = python
-sh = shell
-zip = archives
-"""
-
 
 @pytest.fixture
-def organizer(tmp_path):
-    conf = tmp_path / "conf.cfg"
-    conf.write_text(TEST_CONFIG)
+def organizer():
+    config = OrganizerConfig(
+        (
+            "Archives",
+            "Images",
+            "Images/Raw",
+            "Misc",
+            "Programming",
+            "Programming/Python",
+            "Programming/Shell",
+        ),
+        {
+            ".zip": "Archives",
+            ".jpeg": "Images",
+            ".png": "Images",
+            ".dng": "Images/Raw",
+            ".cfg": "Programming",
+            ".env": "Programming",
+            ".py": "Programming/Python",
+            ".sh": "Programming/Shell",
+        },
+        {
+            ".zip": r"PK\x03\x04",
+            ".py": "#!.*?python",
+            ".png": r"\x89PNG",
+            ".sh": "#!.*?sh",
+        },
+    )
 
-    return FileOrganizer.from_ini(conf)
+    return FileOrganizer(config)
 
 
 def test__determine_dst(organizer, tmp_path):
@@ -67,14 +67,14 @@ def test__determine_dst(organizer, tmp_path):
 
     paths = {
         s.name: None,
-        d.name: organizer.DEFAULT_DIR_NAME,
+        d.name: organizer.config.DEFAULT_DIR_NAME,
         f.name: None,
         x.name: None,
-        e.name: organizer.ext_to_dir[".py"],
-        p.name: organizer.ext_to_dir[".py"],
-        r.name: organizer.ext_to_dir[".dng"],
-        **{k: None for k in organizer.dir_names},
-        "conf.cfg": organizer.ext_to_dir[".cfg"],
+        e.name: organizer.config.ext_to_dir[".py"],
+        p.name: organizer.config.ext_to_dir[".py"],
+        r.name: organizer.config.ext_to_dir[".dng"],
+        **{k: None for k in organizer.config.dir_names},
+        "conf.cfg": organizer.config.ext_to_dir[".cfg"],
     }
 
     for entry in tmp_path.iterdir():
@@ -106,11 +106,11 @@ def test__get_extensionless_dst(organizer, tmp_path):
     unknown.write_text("Some unknown file")
     unknown_target = organizer._get_dst_dir_name_by_signature(unknown)
 
-    assert png_target == organizer.ext_to_dir[".png"]
-    assert python_target == organizer.ext_to_dir[".py"]
-    assert bash_target == organizer.ext_to_dir[".sh"]
-    assert zipfile_target == organizer.ext_to_dir[".zip"]
-    assert unknown_target == organizer.DEFAULT_DIR_NAME
+    assert png_target == organizer.config.ext_to_dir[".png"]
+    assert python_target == organizer.config.ext_to_dir[".py"]
+    assert bash_target == organizer.config.ext_to_dir[".sh"]
+    assert zipfile_target == organizer.config.ext_to_dir[".zip"]
+    assert unknown_target == organizer.config.DEFAULT_DIR_NAME
 
 
 def test__move_file_and_sidecar(organizer, tmp_path):
@@ -131,14 +131,14 @@ def test__move_file_and_sidecar(organizer, tmp_path):
     xmp3 = tmp_path / "xmp.xmp"
     xmp3.write_text("Some dangling xmp file")
 
-    img_target = tmp_path / organizer.ext_to_dir.get(
-        img.suffix, organizer.DEFAULT_DIR_NAME
+    img_target = tmp_path / organizer.config.ext_to_dir.get(
+        img.suffix, organizer.config.DEFAULT_DIR_NAME
     )
-    raw_target = tmp_path / organizer.ext_to_dir.get(
-        raw.suffix, organizer.DEFAULT_DIR_NAME
+    raw_target = tmp_path / organizer.config.ext_to_dir.get(
+        raw.suffix, organizer.config.DEFAULT_DIR_NAME
     )
-    xmp_target = tmp_path / organizer.ext_to_dir.get(
-        xmp3.suffix, organizer.DEFAULT_DIR_NAME
+    xmp_target = tmp_path / organizer.config.ext_to_dir.get(
+        xmp3.suffix, organizer.config.DEFAULT_DIR_NAME
     )
 
     assert img_target == tmp_path / "Images"
@@ -190,6 +190,6 @@ def test__generate_unique_destination_path(organizer, tmp_path):
     dst.write_text("Hello, World!")
 
     new_path = next(organizer._generate_unique_destination_path(dst))
-    padding = len(str(organizer.max_collision_attempts))
+    padding = len(str(organizer.config.max_collision_attempts))
 
     assert new_path.stem == f"file_{1:0{padding}}"
