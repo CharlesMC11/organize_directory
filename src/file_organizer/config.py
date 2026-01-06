@@ -98,7 +98,6 @@ class OrganizerConfig:
 
     # Class methods
 
-    # FIXME: Handle KeyError
     @classmethod
     def from_ini(cls, config_path: Path) -> OrganizerConfig:
         """Initialize the organizer using an INI configuration file.
@@ -124,10 +123,13 @@ class OrganizerConfig:
 
         dir_names = parser["dir_names"].values()
 
-        ext_to_dir = {
-            ext: parser["dir_names"][key]
-            for ext, key in parser["ext_to_dir"].items()
-        }
+        ext_to_dir: dict[str, str] = {}
+        for ext, key in parser["ext_to_dir"].items():
+            if dir_name := parser["dir_names"].get(key):
+                ext_to_dir[ext] = dir_name
+            else:
+                msg = f"{LogActions.CONFIG}: '{key}' not a key in `dir_names`, skipping."
+                logger.warning(msg)
 
         ext_to_re = None
         if "ext_to_re" in parser:

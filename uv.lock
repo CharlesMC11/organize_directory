@@ -13,7 +13,7 @@ wheels = [
 
 [[package]]
 name = "file-organizer"
-version = "4.1.4"
+version = "4.1.5"
 source = { editable = "." }
 
 [package.dev-dependencies]
