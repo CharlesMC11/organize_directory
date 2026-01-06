@@ -116,7 +116,86 @@ def test___init__(tmp_path):
 
 def test_from_ini(tmp_path):
     conf = tmp_path / "conf.cfg"
+    conf.write_text(EXT_TO_RE, encoding=CONFIG_ENCODING)
+
+    with pytest.raises(
+        MissingRequiredFieldsError, match="(dir_names|ext_to_dir)"
+    ):
+        OrganizerConfig.from_ini(conf)
+
     conf.write_text(
         DIR_NAMES + EXT_TO_DIR + EXT_TO_RE, encoding=CONFIG_ENCODING
     )
     OrganizerConfig.from_ini(conf)
+
+
+def test_from_json(tmp_path):
+    import json
+
+    conf = tmp_path / "conf.json"
+    j: dict[str, dict] = {
+        "dir_names": {
+            "archives": "Archives",
+            "images": "Images",
+            "images_raw": "Images/Raw",
+            "programming": "Programming",
+            "python": "Python",
+            "shell": "Shell",
+        }
+    }
+    with conf.open("x", encoding=CONFIG_ENCODING) as f:
+        json.dump(j, f)
+
+    with pytest.raises(MissingRequiredFieldsError, match="ext_to_dir"):
+        OrganizerConfig.from_json(conf)
+
+    j.update(
+        {
+            "ext_to_dir": {
+                "archives": [".zip"],
+                "images": [".jpeg", ".jpg", ".png"],
+                "images_raw": [".dng"],
+                "programming": [".cfg"],
+                "python": [".py"],
+                "shell": [".sh"],
+            }
+        }
+    )
+    with conf.open("w", encoding=CONFIG_ENCODING) as f:
+        json.dump(j, f)
+
+    c = OrganizerConfig.from_json(conf)
+    assert c.dir_names == {
+        "Archives",
+        "Images",
+        "Images/Raw",
+        "Programming",
+        "Python",
+        "Shell",
+        OrganizerConfig.DEFAULT_DIR_NAME,
+    }
+    assert c.ext_to_dir == {
+        ".zip": "Archives",
+        ".jpeg": "Images",
+        ".jpg": "Images",
+        ".png": "Images",
+        ".dng": "Images/Raw",
+        ".cfg": "Programming",
+        ".py": "Python",
+        ".sh": "Shell",
+    }
+    assert c.signatures_re is None
+
+    j.update(
+        {
+            "ext_to_re": {
+                "   .PNG   ": r"\x89PNG",
+            }
+        }
+    )
+    with conf.open("w", encoding=CONFIG_ENCODING) as f:
+        json.dump(j, f)
+
+    o2 = OrganizerConfig.from_json(conf)
+    assert o2.signatures_re is not None
+    assert o2.signatures_re.pattern == b"(?P<g__png>(?>\x89PNG))"

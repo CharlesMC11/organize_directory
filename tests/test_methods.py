@@ -32,9 +32,9 @@ def organizer():
         },
         {
             ".zip": r"PK\x03\x04",
-            ".py": "#!.*?python",
+            ".py": r"#!.*?python",
             ".png": r"\x89PNG",
-            ".sh": "#!.*?sh",
+            ".sh": r"#!.*?sh",
         },
     )
 
