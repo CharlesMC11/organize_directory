@@ -4,7 +4,7 @@ import logging
 from argparse import ArgumentParser
 from pathlib import Path
 
-from file_organizer import FileOrganizer
+from file_organizer import FileOrganizer, OrganizerConfig
 from file_organizer import __name__ as fo_name
 
 logger = logging.getLogger(fo_name)
@@ -24,7 +24,8 @@ def main() -> None:
     # FIXME: Don’t hardcode this here
     targets_file = Path(__file__).parents[2] / "extensions_map.ini"
 
-    organizer = FileOrganizer.from_ini(targets_file)
+    config = OrganizerConfig.from_ini(targets_file)
+    organizer = FileOrganizer(config)
     organizer.organize(args.dir)
 
 
