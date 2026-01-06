@@ -1,14 +1,3 @@
-"""Automated file organizer that supports sidecar files.
-
-This module provides a rule-based file organizer that moves files into
-specified directories based on their extensions or binary signatures. The
-organizer supports configuration via INI and JSON formats for destination
-mappings.
-
-It also handles `.aae` and `.xmp` sidecar files, ensuring they follow their
-parent files during organization.
-"""
-
 import errno
 import logging
 import os
@@ -76,7 +65,7 @@ class FileOrganizer:
         extensions or binary signatures.
 
         Args:
-            root_dir (Path): The directory to organize.
+            root_dir: The directory to organize.
 
         Raises:
             NotADirectoryError: If `root_dir` is not a directory.
@@ -88,16 +77,16 @@ class FileOrganizer:
 
         self._create_dirs(root_dir)
 
-        logger.debug(
-            f"{LogActions.STARTED}: Processing entries in '{root_dir.name}'."
-        )
+        msg = f"{LogActions.STARTED}: Processing entries in '{root_dir.name}"
+        msg += f"{FILE_SEP}'."
+        logger.info(msg)
 
         for entry in root_dir.iterdir():
             self._process_dir_entry(entry, root_dir)
 
-        logger.debug(
-            f"{LogActions.STARTED}: Processing orphaned sidecar files."
-        )
+        msg = f"{LogActions.STARTED}: Processing orphaned sidecar files."
+        logger.debug(msg)
+
         sidecar_dst: Final = root_dir / self.config.DEFAULT_DIR_NAME
         for entry in root_dir.iterdir():
             if entry.name in _IGNORED_NAMES:
@@ -153,9 +142,8 @@ class FileOrganizer:
         except (PermissionError, OSError):
             raise
 
-        logger.info(
-            f"{LogActions.CREATED}: Subdirectories in '{root_dir.name}'."
-        )
+        msg = f"{LogActions.CREATED}: Subdirectories in '{root_dir.name}'."
+        logger.info(msg)
 
     def _process_dir_entry(self, entry: Path, root_dir: Path) -> None:
         """Process a directory entry and move it to the destination directory.
@@ -328,7 +316,7 @@ class FileOrganizer:
 
         if self.config.dry_run:
             msg = f"{LogActions.DRY_RUN}: Would move '{src_sidecar.name}' to "
-            msg += f"'{dst_dir}{FILE_SEP}'.'"
+            msg += f"'{dst_dir.name}{FILE_SEP}'."
             logger.info(msg)
             return dst, sidecar_dst
 
@@ -352,8 +340,8 @@ class FileOrganizer:
         """
 
         if self.config.dry_run:
-            msg = f"{LogActions.DRY_RUN}: Would move '{src.name}' to '{dst_dir}"
-            msg += f"{FILE_SEP}'."
+            msg = f"{LogActions.DRY_RUN}: Would move '{src.name}' to "
+            msg += f"{dst_dir.name}{FILE_SEP}'."
             logger.info(msg)
             return dst_dir / src.name
 
@@ -375,7 +363,8 @@ class FileOrganizer:
                     continue
 
             msg = f"{LogActions.FAILED}: Generating a unique path for "
-            msg += f"'{src.name}' after {self.config.max_collision_attempts} attempts."
+            msg += f"'{src.name}' after {self.config.max_collision_attempts} "
+            msg += "attempts."
             logger.error(msg)
 
         except PermissionError as e:
@@ -411,8 +400,9 @@ class FileOrganizer:
         for n in range(self.config.max_move_retries):
             delay = self.config.retry_delay_seconds * (2**n)
 
-            msg = f"{LogActions.RETRYING} [{n + 1}/{self.config.max_move_retries}]: "
-            msg += f"Moving '{src.name}' in {delay:.2f} s."
+            msg = f"{LogActions.RETRYING} [{n + 1}/"
+            msg += f"{self.config.max_move_retries}]: Moving '{src.name}' in "
+            msg += f"{delay} seconds."
             logger.info(msg)
             sleep(delay)
             try:

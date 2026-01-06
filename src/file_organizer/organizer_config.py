@@ -1,41 +1,3 @@
-"""
-Example INI schema:
-    [dir_names]
-    # Key = Directory Name
-    images = Images
-    programming = Programming
-    python = Programming/Python
-
-    [ext_to_dir]
-    # File Extension = Key from [dir_names]
-    jpg = images
-    png = images
-    py = python
-    pyw = python
-
-    [ext_to_re]
-    # File Extension = Regex Pattern
-    png = \x89PNG
-    py = #!/.+?python
-
-Example JSON schema:
-{
-    "dir_names": {
-        "images": "Images",
-        "programming": "Programming",
-        "python": "Programming/Python"
-    },
-    "ext_to_dir": {
-        "images": [".jpg", ".png"],
-        "python": [".py", ".pyw"]
-    },
-    "ext_to_re": {
-        "png": "\\x89PNG",
-        "py": "#!/.+?python"
-    }
-}
-"""
-
 import json
 import logging
 import os
@@ -85,6 +47,21 @@ class MissingRequiredFieldsError(Exception):
 
 
 class OrganizerConfig:
+    """The rules for organizing files based on extension or binary signatures.
+
+    This class handles the mapping of file extensions to destination
+    directories, the compilation of regex patterns for file identification, and
+    the management of operational settings such as move retries, and dry-run
+    modes.
+
+    Example:
+        >>> config = OrganizerConfig(
+        ...     dir_names=("Documents", "Images"),
+        ...     ext_to_dir={"pdf": "Documents", "png": "Images"},
+        ...     ext_to_re={"png": r"\x89PNG"},
+        ... )
+    """
+
     # Class constants
 
     SIGNATURE_READ_SIZE: Final = 32
@@ -103,9 +80,26 @@ class OrganizerConfig:
     def from_ini(cls, config_path: Path) -> OrganizerConfig:
         """Initialize the organizer using an INI configuration file.
 
+        Example INI schema:
+            [dir_names]
+            # Key = Directory Name
+            images = Images
+            programming = Programming
+            python = Programming/Python
+
+            [ext_to_dir]
+            # File Extension = Key from [dir_names]
+            jpeg = images
+            png = images
+            py = python
+
+            [ext_to_re]
+            # File Extension = Regex Pattern
+            png = \x89PNG
+            py = #!/.+?python
+
         Args:
-            config_path (pathlib.Path): The path to valid `.ini` configuration
-                file.
+            config_path: The path to valid `.ini` configuration file.
 
         Returns:
             An instance of FileOrganizer configured with rules from the file.
@@ -129,7 +123,8 @@ class OrganizerConfig:
             if dir_name := parser["dir_names"].get(key):
                 ext_to_dir[ext] = dir_name
             else:
-                msg = f"{LogActions.CONFIG}: '{key}' not a key in `dir_names`, skipping."
+                msg = f"{LogActions.CONFIG}: '{key}' not a key in `dir_names`, "
+                msg += f"skipping extension '{ext}'."
                 logger.warning(msg)
 
         ext_to_re = None
@@ -140,14 +135,29 @@ class OrganizerConfig:
         logger.info(msg)
         return cls(dir_names, ext_to_dir, ext_to_re)
 
-    # FIXME: Handle missing fields better
     @classmethod
     def from_json(cls, config_path: Path) -> OrganizerConfig:
         """Initialize the organizer using an JSON configuration file.
 
+        Example JSON schema:
+        {
+            "dir_names": {
+                "images": "Images",
+                "programming": "Programming",
+                "python": "Programming/Python"
+            },
+            "ext_to_dir": {
+                "images": [".jpeg", ".png"],
+                "python": [".py"]
+            },
+            "ext_to_re": {
+                "png": "\\x89PNG",
+                "py": "#!/.*?python"
+            }
+        }
+
         Args:
-            config_path (pathlib.Path): The path to valid `.json` configuration
-                file.
+            config_path: The path to valid `.json` configuration file.
 
         Returns:
             An instance of FileOrganizer configured with rules from the file.
@@ -191,7 +201,7 @@ class OrganizerConfig:
         max_collision_attempts: int | None = None,
         dry_run: bool = False,
     ) -> None:
-        """Initialize the FileOrganizer with specific configurations.
+        """Initialize the OrganizerConfig with specific configurations.
 
         This constructor sanitizes the provided extension mappings and compiles
         binary signature patterns if provided. Configuration values (retries,
@@ -257,9 +267,8 @@ class OrganizerConfig:
                 msg += "patterns provided."
                 logger.warning(msg)
         else:
-            logger.info(
-                f"{LogActions.INIT}: No binary signature regex provided."
-            )
+            msg = f"{LogActions.INIT}: No binary signature regex provided."
+            logger.info(msg)
 
         self.max_move_retries: Final = (
             max_move_retries
