@@ -17,8 +17,8 @@ FILE_SEP: Final = os.sep
 """Platform-dependent file separator."""
 
 _REQUIRED_CONFIG_FIELDS: Final = frozenset({"dir_names", "ext_to_dir"})
-"""Keys that must be defined in configuration files to prevent a
-`MissingRequiredFieldsError`.
+"""Keys that must be defined in configuration files for the script to
+run.
 """
 
 _IGNORED_NAMES: Final = frozenset({".DS_Store", ".localized"})
@@ -125,7 +125,7 @@ class FileOrganizer:
             PermissionError | OSError: If `root_dir` cannot be accessed.
         """
 
-        if not root_dir.info.is_dir():
+        if not root_dir.is_dir():
             msg = f"{LogActions.FAILED}: Not a directory '{root_dir.name}'."
             raise NotADirectoryError(msg)
 
@@ -272,7 +272,7 @@ class FileOrganizer:
         assert match.lastgroup is not None, msg
         ext = self.config.name_to_ext[match.lastgroup]
 
-        msg = f"{LogActions.IDENTIFIED}: '{file.name}' as '.{ext}' via binary "
+        msg = f"{LogActions.IDENTIFIED}: '{file.name}' as '{ext}' via binary "
         msg += "signature."
         logger.info(msg)
         return self.config.ext_to_dir.get(ext, self.config.DEFAULT_DIR_NAME)
@@ -349,13 +349,11 @@ class FileOrganizer:
             return src.move_into(dst_dir)
 
         except FileExistsError:
-            path_generator: Final = self._generate_unique_destination_path(
+            paths: Final = self._generate_unique_destination_path(
                 dst_dir / src.name
             )
 
-            for dst_path in islice(
-                path_generator, self.config.max_collision_attempts
-            ):
+            for dst_path in islice(paths, self.config.max_collision_attempts):
                 try:
                     return src.move(dst_path)
 
@@ -368,9 +366,9 @@ class FileOrganizer:
             logger.error(msg)
 
         except PermissionError as e:
-            logger.error(
-                f"{LogActions.FAILED}: Permission denied for '{src.name}': {e}"
-            )
+            msg = f"{LogActions.FAILED}: Permission denied for '{src.name}': "
+            msg += f"{e}"
+            logger.error(msg)
 
         except OSError as e:
             # Retry if the OS temporarily locks the file.
