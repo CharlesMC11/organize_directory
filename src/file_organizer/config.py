@@ -135,8 +135,8 @@ class OrganizerConfig:
         if "ext_to_re" in parser:
             ext_to_re = parser["ext_to_re"]
 
-        logger.info(f"CONFIG: Loaded rules from '{config_path.name}'.")
-
+        msg = f"{LogActions.CONFIG}: Loaded rules from '{config_path.name}'."
+        logger.info(msg)
         return cls(dir_names, ext_to_dir, ext_to_re)
 
     # FIXME: Handle missing fields better
@@ -164,7 +164,7 @@ class OrganizerConfig:
 
         dir_names = content["dir_names"].values()
 
-        ext_to_dir = {}
+        ext_to_dir: dict[str, str] = {}
         for dir_key, extensions in content["ext_to_dir"].items():
             for ext in extensions:
                 ext_to_dir[ext] = content["dir_names"][dir_key]
@@ -173,8 +173,8 @@ class OrganizerConfig:
         if "ext_to_re" in content:
             ext_to_re = content["ext_to_re"]
 
-        logger.info(f"CONFIG: Loaded rules from '{config_path.name}'.")
-
+        msg = f"{LogActions.CONFIG}: Loaded rules from '{config_path.name}'."
+        logger.info(msg)
         return cls(dir_names, ext_to_dir, ext_to_re)
 
     # Magic methods
