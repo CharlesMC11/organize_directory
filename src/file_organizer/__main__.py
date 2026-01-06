@@ -4,10 +4,9 @@ import logging
 from argparse import ArgumentParser
 from pathlib import Path
 
-from file_organizer import FileOrganizer, OrganizerConfig
-from file_organizer import __name__ as fo_name
+from file_organizer import FileOrganizer, OrganizerConfig, __name__
 
-logger = logging.getLogger(fo_name)
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -16,15 +15,15 @@ def main() -> None:
     handler = logging.StreamHandler()
     logger.addHandler(handler)
 
-    # TODO: Add dry-run mode
     parser = ArgumentParser(prog="File Organizer", description=__doc__)
     parser.add_argument("dir", type=Path, help="the directory to organize")
+    parser.add_argument("config", type=Path, help="the config file to use")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="show what would be done"
+    )
     args = parser.parse_args()
 
-    # FIXME: Don’t hardcode this here
-    targets_file = Path(__file__).parents[2] / "extensions_map.ini"
-
-    config = OrganizerConfig.from_ini(targets_file)
+    config = OrganizerConfig.from_ini(args.config, dry_run=args.dry_run)
     organizer = FileOrganizer(config)
     organizer.organize(args.dir)
 

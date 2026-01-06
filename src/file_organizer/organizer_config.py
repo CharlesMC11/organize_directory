@@ -77,7 +77,9 @@ class OrganizerConfig:
     # Class methods
 
     @classmethod
-    def from_ini(cls, config_path: Path) -> OrganizerConfig:
+    def from_ini(
+        cls, config_path: Path, *, dry_run: bool = False
+    ) -> OrganizerConfig:
         """Initialize the organizer using an INI configuration file.
 
         Example INI schema:
@@ -100,6 +102,7 @@ class OrganizerConfig:
 
         Args:
             config_path: The path to valid `.ini` configuration file.
+            dry_run: If `True`, do not actually perform any changes.
 
         Returns:
             An instance of FileOrganizer configured with rules from the file.
@@ -133,10 +136,12 @@ class OrganizerConfig:
 
         msg = f"{LogActions.CONFIG}: Loaded rules from '{config_path.name}'."
         logger.info(msg)
-        return cls(dir_names, ext_to_dir, ext_to_re)
+        return cls(dir_names, ext_to_dir, ext_to_re, dry_run=dry_run)
 
     @classmethod
-    def from_json(cls, config_path: Path) -> OrganizerConfig:
+    def from_json(
+        cls, config_path: Path, *, dry_run: bool = False
+    ) -> OrganizerConfig:
         """Initialize the organizer using an JSON configuration file.
 
         Example JSON schema:
@@ -158,6 +163,7 @@ class OrganizerConfig:
 
         Args:
             config_path: The path to valid `.json` configuration file.
+            dry_run: If `True`, do not actually perform any changes.
 
         Returns:
             An instance of FileOrganizer configured with rules from the file.
@@ -186,7 +192,7 @@ class OrganizerConfig:
 
         msg = f"{LogActions.CONFIG}: Loaded rules from '{config_path.name}'."
         logger.info(msg)
-        return cls(dir_names, ext_to_dir, ext_to_re)
+        return cls(dir_names, ext_to_dir, ext_to_re, dry_run=dry_run)
 
     # Magic methods
 
