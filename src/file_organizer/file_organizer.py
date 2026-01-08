@@ -16,11 +16,6 @@ __all__ = ("FILE_SEP", "FileOrganizer")
 FILE_SEP: Final = os.sep
 """Platform-dependent file separator."""
 
-_REQUIRED_CONFIG_FIELDS: Final = frozenset({"dir_names", "ext_to_dir"})
-"""Keys that must be defined in configuration files for the script to
-run.
-"""
-
 _IGNORED_NAMES: Final = frozenset({".DS_Store", ".localized"})
 """Files the organizer should skip entirely."""
 
