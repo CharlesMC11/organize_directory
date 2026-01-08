@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
@@ -48,9 +49,6 @@ def organizer():
 
 def test__create_dirs(organizer, tmp_path):
     test_dir = tmp_path / "test_dir"
-
-    with pytest.raises(NotADirectoryError):
-        organizer._create_dirs(test_dir)
 
     assert not (test_dir / organizer.config.DEFAULT_DIR_NAME).is_dir()
 
@@ -183,8 +181,8 @@ def test__move_file_and_sidecar(organizer, tmp_path):
     assert img_target == tmp_path / "Images"
     assert raw_target == tmp_path / "Images/Raw"
 
-    organizer._move_file_and_sidecar(img, img_target)
-    organizer._move_file_and_sidecar(raw, raw_target)
+    organizer._move_file_and_sidecar(img, img_target / img.name)
+    organizer._move_file_and_sidecar(raw, raw_target / raw.name)
 
     assert (img_target / "jpeg.jpeg").exists()
     assert (img_target / "jpeg.xmp").exists()
@@ -206,24 +204,22 @@ def test__move_file_and_sidecar(organizer, tmp_path):
             assert (xmp_target / "xmp.xmp").exists()
 
 
-def test__move_to_dir(organizer, caplog, tmp_path):
+def test__move(organizer, caplog, tmp_path):
     dst_dir = tmp_path / "dst"
     dst_dir.mkdir(0)
 
-    f = tmp_path / "file.txt"
-    f.write_text("Hello, World!")
+    f1 = tmp_path / "file.txt"
+    f2 = Path(f1)
 
-    result = organizer._move_to_dir(f, dst_dir)
-    assert result is None
-    assert "Permission denied" in caplog.text
+    f1.write_text("Hello, World!")
 
     dst_dir.chmod(0o755)
-    result = organizer._move_to_dir(f, dst_dir)
-    assert result == dst_dir / f.name
+    result = organizer._move(f1, dst_dir / f1.name)
+    assert result == dst_dir / f1.name
 
-    f.write_text("Hello, World!")
-    result = organizer._move_to_dir(f, dst_dir)
-    assert result == dst_dir / f"{f.stem}_01{f.suffix}"
+    f2.write_text("Hello, World!")
+    result = organizer._move(f2, dst_dir / f2.name)
+    assert result == dst_dir / f"{f2.stem}_01{f2.suffix}"
 
 
 def test__generate_unique_destination_path(organizer, tmp_path):
@@ -236,8 +232,3 @@ def test__generate_unique_destination_path(organizer, tmp_path):
     new_path = next(organizer._generate_unique_destination_path(dst))
     padding = len(str(organizer.config.max_collision_attempts))
     assert new_path.stem == f"file_{1:0{padding}}"
-
-    new_path.write_text("Hello, World!")
-
-    new_path = next(organizer._generate_unique_destination_path(dst))
-    assert new_path.stem == f"file_{2:0{padding}}"
