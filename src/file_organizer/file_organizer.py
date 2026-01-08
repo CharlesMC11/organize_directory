@@ -105,7 +105,7 @@ class FileOrganizer:
                 continue
 
             if entry.suffix.lower() in _SIDECAR_EXTENSIONS:
-                self._move_to_dir(entry, sidecar_dst)
+                self._move(entry, sidecar_dst)
 
         msg = f"{LogActions.FINISHED}: Processing items in '{root_dir.name}"
         msg += f"{FILE_SEP}'."
@@ -153,14 +153,14 @@ class FileOrganizer:
 
         dst_path = root_dir / dst_dir_name
         if entry.info.is_dir():
-            d = self._move_to_dir(entry, dst_path)
+            d = self._move(entry, dst_path / entry.name)
             if not (self.config.dry_run or d is None):
                 msg = f"{LogActions.MOVED}: Directory '{d.name}' to "
                 msg += f"'{dst_dir_name}{FILE_SEP}'."
                 logger.info(msg)
 
         else:
-            p, s = self._move_file_and_sidecar(entry, dst_path)
+            p, s = self._move_file_and_sidecar(entry, dst_path / entry.name)
             if not (self.config.dry_run or p is None):
                 msg = f"{LogActions.MOVED}: File '{p.name}' to '{dst_dir_name}"
                 msg += f"{FILE_SEP}'."
@@ -273,7 +273,7 @@ class FileOrganizer:
         return self.config.ext_to_dir.get(ext, self.config.DEFAULT_DIR_NAME)
 
     def _move_file_and_sidecar(
-        self, src: Path, dst_dir: Path
+        self, src: Path, dst: Path
     ) -> tuple[Path | None, Path | None]:
         """Move `src` and, if it exists, its sidecar into `dst_dir`.
 
@@ -281,8 +281,8 @@ class FileOrganizer:
         If moving the sidecar file fails, the process continues.
 
         Args:
-            src: The source file’s full path.
-            dst_dir: the destination directory’s path.
+            src: The path to move from.
+            dst: The path to move to.
 
         Returns:
             A tuple containing:
@@ -292,7 +292,7 @@ class FileOrganizer:
                     `None` otherwise.
         """
 
-        if (dst := self._move_to_dir(src, dst_dir)) is None:
+        if (final_dst := self._move(src, dst)) is None:
             return None, None
 
         src_sidecar = ext = None
@@ -313,53 +313,48 @@ class FileOrganizer:
             msg = f"{LogActions.DRY_RUN}: Would move '{src_sidecar.name}' to "
             msg += f"'{dst_dir.name}{FILE_SEP}'."
             logger.info(msg)
-            return dst, sidecar_dst
+            return final_dst, sidecar_dst
 
         try:
-            # Overwrite existing sidecars in a destination
-            return dst, src_sidecar.replace(sidecar_dst)
+            return final_dst, src_sidecar.move(sidecar_dst)
 
         except OSError as e:
-            return dst, self._retry_move_to_dir(src, dst_dir, e)
+            return final_dst, self._retry_move(src_sidecar, sidecar_dst, e)
 
-    def _move_to_dir(self, src: Path, dst_dir: Path) -> Path | None:
+    def _move(self, src: Path, dst: Path) -> Path | None:
         """Attempt to move `src` into `dst_dir`.
 
         Args:
-            src: The full path of a file or directory to move.
-            dst_dir: The destination directory’s path
+             src: The path to move from.
+             dst: The path to move to.
 
-        Returns:
-            The final destination path if moving `src` succeeds, `None`
-                otherwise.
+         Returns:
+             The final destination path if moving `src` succeeds, `None`
+                 otherwise.
         """
+
+        if dst.exists():
+            paths: Final = self._generate_unique_destination_path(dst)
+
+            for dst in islice(paths, self.config.max_collision_attempts):
+                if not dst.exists():
+                    break
+
+            else:
+                msg = f"{LogActions.FAILED}: Generating a unique path for "
+                msg += f"'{src.name}' after "
+                msg += f"{self.config.max_collision_attempts} attempts."
+                logger.error(msg)
+                return None
 
         if self.config.dry_run:
             msg = f"{LogActions.DRY_RUN}: Would move '{src.name}' to "
-            msg += f"{dst_dir.name}{FILE_SEP}'."
+            msg += f"{dst.parent.name}{FILE_SEP}'."
             logger.info(msg)
-            return dst_dir / src.name
+            return dst
 
         try:
-            return src.move_into(dst_dir)
-
-        # FIXME: This doesn’t actually get raised
-        except FileExistsError:
-            paths: Final = self._generate_unique_destination_path(
-                dst_dir / src.name
-            )
-
-            for dst_path in islice(paths, self.config.max_collision_attempts):
-                try:
-                    return src.move(dst_path)
-
-                except FileExistsError:
-                    continue
-
-            msg = f"{LogActions.FAILED}: Generating a unique path for "
-            msg += f"'{src.name}' after {self.config.max_collision_attempts} "
-            msg += "attempts."
-            logger.error(msg)
+            return src.move(dst)
 
         except PermissionError as e:
             msg = f"{LogActions.FAILED}: Permission denied for '{src.name}': "
@@ -368,18 +363,16 @@ class FileOrganizer:
 
         except OSError as e:
             # Retry if the OS temporarily locks the file.
-            return self._retry_move_to_dir(src, dst_dir, e)
+            return self._retry_move(src, dst, e)
 
         return None
 
-    def _retry_move_to_dir(
-        self, src: Path, dst_dir: Path, error: OSError
-    ) -> Path | None:
+    def _retry_move(self, src: Path, dst: Path, error: OSError) -> Path | None:
         """Retry moving `src` into `dst_dir` after the caller raises an OSError.
 
         Args:
-            src: The full path of a file or directory to move.
-            dst_dir: The destination directory’s path.
+            src: The path to move from.
+            dst: The path to move to.
 
         Returns:
             `None` if the OSError in the calling function is not transient.
@@ -400,7 +393,7 @@ class FileOrganizer:
             logger.info(msg)
             sleep(delay)
             try:
-                return src.move_into(dst_dir)
+                return src.move(dst)
 
             except OSError:
                 continue
