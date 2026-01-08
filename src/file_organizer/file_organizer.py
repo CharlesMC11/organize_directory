@@ -70,6 +70,10 @@ class FileOrganizer:
         if self.config.dry_run:
             logger.info(f"{LogActions.DRY_RUN}: No changes will be made.")
 
+        if not root_dir.is_dir():
+            msg = f"{LogActions.FAILED}: Not a directory '{root_dir.name}'."
+            raise NotADirectoryError(msg)
+
         self._create_dirs(root_dir)
 
         msg = f"{LogActions.STARTED}: Processing entries in '{root_dir.name}"
@@ -119,10 +123,6 @@ class FileOrganizer:
             NotADirectoryError: If `root_dir` is not a directory.
             PermissionError | OSError: If `root_dir` cannot be accessed.
         """
-
-        if not root_dir.is_dir():
-            msg = f"{LogActions.FAILED}: Not a directory '{root_dir.name}'."
-            raise NotADirectoryError(msg)
 
         if self.config.dry_run:
             msg = f"{LogActions.DRY_RUN}: Would create subdirectories in "
