@@ -84,7 +84,7 @@ class FileOrganizer:
             self._process_dir_entry(entry, root_dir)
 
         msg = f"{LogActions.STARTED}: Processing orphaned sidecar files."
-        logger.debug(msg)
+        logger.info(msg)
 
         sidecar_dst: Final = root_dir / self.config.DEFAULT_DIR_NAME
         for entry in root_dir.iterdir():
