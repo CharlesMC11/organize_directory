@@ -295,23 +295,20 @@ class FileOrganizer:
         if (final_dst := self._move(src, dst)) is None:
             return None, None
 
-        src_sidecar = ext = None
         for ext in _SIDECAR_EXTENSIONS:
             src_sidecar = src.with_suffix(ext)
-            if src_sidecar.info.exists():
+            if src_sidecar.exists():
                 break
-
-        if src_sidecar is None or ext is None:
-            logger.debug(
-                f"{LogActions.SKIPPED}: '{src.name}' has no sidecar file."
-            )
-            return dst, None
+        else:
+            msg = f"{LogActions.SKIPPED}: '{src.name}' has no sidecar file."
+            logger.debug(msg)
+            return final_dst, None
 
         sidecar_dst: Final = dst.with_suffix(ext)
 
         if self.config.dry_run:
             msg = f"{LogActions.DRY_RUN}: Would move '{src_sidecar.name}' to "
-            msg += f"'{dst_dir.name}{FILE_SEP}'."
+            msg += f"'{dst.parent.name}{FILE_SEP}'."
             logger.info(msg)
             return final_dst, sidecar_dst
 
